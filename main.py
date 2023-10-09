@@ -25,13 +25,12 @@ logging.basicConfig(
 )
 
 args = ap.parse_args()
+torch.manual_seed(42)
 
 
 def main(args):
     logging.info("Load train data")
     X_train, y_train = load_train(args.data_dir)
-    logging.info("Load test data")
-    X_test, y_test = load_test(args.data_dir)
 
     logging.info("Creating dataset")
     kfold = StratifiedKFold(args.k_cv, shuffle=True, random_state=42)
@@ -81,13 +80,15 @@ def main(args):
         print(f"The test_ds size {len(test_ds)}")
 
         early_stopping_callback = EarlyStopping(
-            monitor="val_loss",  # Monitor the validation loss
-            patience=10,  # Number of epochs with no improvement before stopping
-            mode="min",  # 'min' mode for loss (you can use 'max' for accuracy, etc.)
-            verbose=True,  # Print messages about early stopping
+            monitor="val_loss",
+            patience=10,
+            mode="min",
+            verbose=True,
         )
 
-        trainer = pl.Trainer(max_epochs=100, callbacks=[early_stopping_callback])
+        trainer = pl.Trainer(
+            max_epochs=1, callbacks=[early_stopping_callback], log_every_n_steps=5
+        )
 
         model = MethaneDetectionModel()
         print("Initialize model")
@@ -105,7 +106,7 @@ def main(args):
 
         print("---------------------------\n")
         print("Classification report")
-        print(classification_report(predictions, ground_truth))
+        print(classification_report(ground_truth, predictions))
         print("---------------------------\n")
 
     return 0
