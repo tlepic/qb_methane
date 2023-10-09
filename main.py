@@ -20,7 +20,7 @@ ap.add_argument("--k_cv", type=int, default=5)
 ap.add_argument("--batch_size", type=int, default=12)
 
 logging.basicConfig(
-    level=logging.DEBUG,  # Set the logging level
+    level=logging.INFO,  # Set the logging level
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",  # Set the log message format
 )
 
