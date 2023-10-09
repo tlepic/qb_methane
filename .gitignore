@@ -162,3 +162,5 @@ cython_debug/
 # Data
 test_data
 train_data
+lightning_logs
+checkpoints
