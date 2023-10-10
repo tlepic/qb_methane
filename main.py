@@ -7,7 +7,7 @@ import pytorch_lightning as pl
 import torch
 from methane import ImageDataset, weight_init
 from methane.data import load_train
-from methane.models import MethaneDetectionModel
+from methane.models import MethaneDetectionModel, Gasnet
 from pytorch_lightning.callbacks import EarlyStopping
 from sklearn.metrics import accuracy_score, classification_report, roc_auc_score
 from sklearn.model_selection import StratifiedKFold, train_test_split
@@ -18,6 +18,7 @@ ap = argparse.ArgumentParser()
 ap.add_argument("--data_dir", type=str, default="data")
 ap.add_argument("--k_cv", type=int, default=5)
 ap.add_argument("--batch_size", type=int, default=12)
+ap.add_argument("--model", type=str, default="gasnet")
 
 logging.basicConfig(
     level=logging.INFO,  # Set the logging level
@@ -89,10 +90,16 @@ def main(args):
         )
 
         trainer = pl.Trainer(
-            max_epochs=1, callbacks=[early_stopping_callback], log_every_n_steps=5
+            max_epochs=100, callbacks=[early_stopping_callback], log_every_n_steps=5
         )
 
-        model = MethaneDetectionModel()
+        if args.model == "baseline":
+            model = MethaneDetectionModel()
+        if args.model == "gasnet":
+            model = Gasnet()
+        else:
+            print("Provide valid model name")
+            break
         print("Initialize model")
         model.apply(weight_init)
         trainer.fit(model, train_loader, val_loader)
