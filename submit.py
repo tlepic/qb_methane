@@ -95,13 +95,15 @@ def main(args):
     output = trainer.predict(model, test_loader)
 
     predictions = []
+    probas = []
 
     for batch in output:
-        y_hat, _ = batch
+        proba, y_hat, _ = batch
         predictions.extend(y_hat.cpu().numpy())
+        probas.extend(proba.cpu().numpy())
 
     # Create a DataFrame
-    data = {"path": file_list, "label": predictions}
+    data = {"path": file_list, "label": probas}
     df = pd.DataFrame(data)
     # Specify the CSV file name
     csv_filename = "test.csv"

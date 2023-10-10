@@ -17,7 +17,7 @@ class MethaneDetectionModel(pl.LightningModule):
         self.conv1 = nn.Conv2d(1, 16, kernel_size=3, stride=1, padding=1)
         self.conv2 = nn.Conv2d(16, 32, kernel_size=3, stride=1, padding=1)
         self.fc1 = nn.Linear(32 * 16 * 16 * 16, 64)
-        self.fc2 = nn.Linear(64, 2)  # 2 classes: emission or non-emission
+        self.fc2 = nn.Linear(64, 1)  # Output the likeliness of plume
 
     def forward(self, x):
         x = F.relu(self.conv1(x))
@@ -32,9 +32,9 @@ class MethaneDetectionModel(pl.LightningModule):
         x = x.float()
         y = y.long()
         y_hat = self.forward(x)
-        target = F.one_hot(y, num_classes=2)
+        y_hat = y_hat.view(y.shape[0])
         criterion = torch.nn.BCEWithLogitsLoss()
-        loss = criterion(y_hat, target.float())
+        loss = criterion(y_hat, y.float())
         self.log("train_loss", loss)
         return loss
 
@@ -43,17 +43,19 @@ class MethaneDetectionModel(pl.LightningModule):
         x = x.float()
         y = y.long()
         y_hat = self.forward(x)
-        target = F.one_hot(y, num_classes=2)
+        y_hat = y_hat.view(y.shape[0])
         criterion = torch.nn.BCEWithLogitsLoss()
-        loss = criterion(y_hat, target.float())
+        loss = criterion(y_hat, y.float())
         self.log("val_loss", loss)
 
     def predict_step(self, batch, batch_idx):
         x, y = batch
         x = x.float()
         y = y.long()
-        y_hat = torch.argmax(self(x), dim=1)
-        return y_hat, y
+        out = self(x)
+        proba = F.sigmoid(out)
+        y_hat = (proba > 0.5).int()
+        return proba.view(-1), y_hat, y
 
     def configure_optimizers(self):
         optimizer = optim.Adam(self.parameters(), lr=0.001)
