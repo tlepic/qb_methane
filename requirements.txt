@@ -3,3 +3,5 @@ nbstripout
 ipykernel
 torch
 torchvision
+pandas
+pytorch_lightning
