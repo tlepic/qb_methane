@@ -5,7 +5,8 @@ import numpy as np
 import pandas as pd
 import pytorch_lightning as pl
 import torch
-from methane import ImageDataset, load_test, load_train, weight_init
+from methane import ImageDataset, weight_init
+from methane.data import load_train
 from methane.models import MethaneDetectionModel
 from pytorch_lightning.callbacks import EarlyStopping
 from sklearn.metrics import accuracy_score, classification_report
