@@ -8,7 +8,7 @@ To start using the project do the followings:
 - Create a virtual environmnent and activate it
 
 ```bash
-$conda create env -name qb_env -python=3.8
+$conda create --name qb_env python=3.8
 $conda activate qb_env
 ```
 
