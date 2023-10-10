@@ -6,3 +6,4 @@ torchvision
 pandas
 pytorch_lightning
 tifffile
+scikit-learn
