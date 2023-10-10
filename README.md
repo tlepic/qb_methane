@@ -8,7 +8,7 @@ To start using the project do the followings:
 - Create a virtual environmnent and activate it
 
 ```bash
-$conda create env -name qb_env -python=3.8
+$conda create --name qb_env python=3.8
 $conda activate qb_env
 ```
 
@@ -19,9 +19,15 @@ pip install -r requirements.txt
 pip install -e .
 ```
 
+- Unzip data inside the data folder
+
 - Run a cross validation for the baseline
 
 ```bash
 $python main.py
 ```
+
+**Linting and formating**
+
 - Do not forget to use Black formatter before pushing to avoid linting conflicts
+- Please use isort extension to sort your imports
