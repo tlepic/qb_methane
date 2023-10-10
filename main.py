@@ -97,7 +97,7 @@ def main(args):
         )
 
         trainer = pl.Trainer(
-            max_epochs=100,
+            max_epochs=1,
             callbacks=[early_stopping_callback, checkpoint_callback],
             log_every_n_steps=5,
         )
@@ -138,12 +138,12 @@ def main(args):
     print(
         "Average accuracy "
         + "{:.2%}".format(np.mean(np.array(acc)))
-        + f" ± {np.std(np.array(acc))}"
+        + "± {:.2%}".format(np.std(np.array(acc)))
     )
     print(
         "Average ROC AUC "
         + "{:.2%}".format(np.mean(np.array(auc)))
-        + f" ± {np.std(np.array(auc))}"
+        + "± {:.2%}".format(np.std(np.array(auc)))
     )
     print("---------------------------\n")
 
