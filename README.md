@@ -24,3 +24,4 @@ pip install -e .
 ```bash
 $python main.py
 ```
+- Do not forget to use Black formatter before pushing to avoid linting conflicts
