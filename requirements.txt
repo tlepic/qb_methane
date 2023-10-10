@@ -5,3 +5,4 @@ torch
 torchvision
 pandas
 pytorch_lightning
+tifffile
