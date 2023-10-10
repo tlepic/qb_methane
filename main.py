@@ -13,6 +13,7 @@ from sklearn.metrics import accuracy_score, classification_report, roc_auc_score
 from sklearn.model_selection import StratifiedKFold, train_test_split
 from torch.utils.data import DataLoader
 
+# Étape 1 : Analyser les arguments de la ligne de commande
 ap = argparse.ArgumentParser()
 
 ap.add_argument("--data_dir", type=str, default="data")
@@ -20,19 +21,33 @@ ap.add_argument("--k_cv", type=int, default=5)
 ap.add_argument("--batch_size", type=int, default=12)
 ap.add_argument("--model", type=str, default="gasnet")
 
+# Étape 2 : Configurer les journaux
 logging.basicConfig(
     level=logging.INFO,  # Set the logging level
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",  # Set the log message format
 )
 
+# Étape 3 : Initialisation de random seed
 args = ap.parse_args()
 torch.manual_seed(42)
 
-
+# Étape 4 : Définir la fonction principale
 def main(args):
+    """
+    Fonction principale pour l'entraînement et l'évaluation du modèle.
+
+    Args:
+        args (argparse.Namespace): Arguments de la ligne de commande.
+
+    Returns:
+        int: Code de retour (0 pour succès).
+    """
+    
+    # Charger les données d'entraînement
     logging.info("Load train data")
     X_train, y_train = load_train(args.data_dir)
-
+    
+    # Créer le jeu de données et effectuer une validation croisée en k-fold
     logging.info("Creating dataset")
     kfold = StratifiedKFold(args.k_cv, shuffle=True, random_state=42)
 
@@ -133,6 +148,7 @@ def main(args):
         acc.append(accuracy_score(ground_truth, predictions))
         auc.append(roc_auc_score(ground_truth, probas))
 
+        # Afficher les résultats agrégés
     print("---------------------------\n")
     print("Averaged results")
     print(
@@ -149,7 +165,7 @@ def main(args):
 
     return 0
 
-
+# Exécuter la fonction principale
 if __name__ == "__main__":
     logging.info("Create dataset")
     main(args)
