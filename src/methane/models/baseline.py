@@ -17,9 +17,10 @@ class MethaneDetectionModel(pl.LightningModule):
         self.conv1 = nn.Conv2d(1, 16, kernel_size=3, stride=1, padding=1)
         self.conv2 = nn.Conv2d(16, 32, kernel_size=3, stride=1, padding=1)
         self.fc1 = nn.Linear(32 * 16 * 16 * 16, 64)
-        self.fc2 = nn.Linear(64, 1)  # Output the likeliness of plume
+        self.fc2 = nn.Linear(64, 1)
 
     def forward(self, x):
+        print(x.shape)  # Debug line
         x = F.relu(self.conv1(x))
         x = F.relu(self.conv2(x))
         x = x.view(x.size(0), -1)

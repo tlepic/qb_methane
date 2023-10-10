@@ -1,9 +1,10 @@
-# QB_methane
-Repository to gather the code for Quantum Black challenge on methane leakage.
+# Methane MRV Study
 
-Model should be implemented using pytorch lightning (see baseline for more details)
+CleanR satellite images and deep learning to provide a method for monitoring, reporting and verification (MRV) of methane emissions for reporting.
 
-To start using the project do the followings:
+Project: localize methane leaks in the atmosphere.
+
+## Project Setup
 
 - Create a virtual environmnent and activate it
 
@@ -31,3 +32,31 @@ $python main.py
 
 - Do not forget to use Black formatter before pushing to avoid linting conflicts
 - Please use isort extension to sort your imports
+
+## Model Development
+
+### Data: 
+
+Satellite images [data set – 64 x 64 images in greyscale] of different locations.
+* path
+* date the satelite image was taken
+* class (`plume` or `no_plume`)
+* an ID identifying the location
+* latitude and longitude coordinates locating the center of the plume (`lat`,`lon`)
+* pixel coordinates locating the center of the plume in the image (`coord_x`,`coord_y`). Please be midnful that the axis origin (0,0) is at the top left corner of the image
+
+The dataset contains two folders:
+- `plume` : contains all images with plumes of methane.
+- `no_plume` : contains all images with no plume of methane.
+
+### Target
+
+Identify whether each location contains a methane plume or not.
+
+### Model
+
+Model should be implemented using pytorch lightning (see baseline for more details)
+
+## Business Plan
+
+Identify use cases where this model can be used to drive positive impact. 
