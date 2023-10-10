@@ -6,9 +6,9 @@ import pandas as pd
 import pytorch_lightning as pl
 import torch
 from methane import ImageDataset, weight_init
-from methane.data import load_train, load_test
-from methane.models import MethaneDetectionModel, Gasnet
-from pytorch_lightning.callbacks import EarlyStopping
+from methane.data import load_test, load_train
+from methane.models import Gasnet, MethaneDetectionModel
+from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from sklearn.metrics import accuracy_score, classification_report
 from sklearn.model_selection import StratifiedKFold, train_test_split
 from torch.utils.data import DataLoader
@@ -84,15 +84,24 @@ def main(args):
         verbose=True,  # Print messages about early stopping
     )
 
+    checkpoint_callback = ModelCheckpoint(
+        save_top_k=1,
+        monitor="val_loss",
+        mode="min",
+        filename="best-model-{epoch:02d}-{val_loss:.2f}",
+    )
+
     trainer = pl.Trainer(
-        max_epochs=100, callbacks=[early_stopping_callback], log_every_n_steps=5
+        max_epochs=100,
+        callbacks=[early_stopping_callback, checkpoint_callback],
+        log_every_n_steps=5,
     )
 
     model = Gasnet()
     print("Initialize model")
     model.apply(weight_init)
     trainer.fit(model, train_loader, val_loader)
-    output = trainer.predict(model, test_loader)
+    output = trainer.predict(model, test_loader, ckpt_path="best")
 
     predictions = []
     probas = []
