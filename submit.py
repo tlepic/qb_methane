@@ -7,7 +7,7 @@ import pytorch_lightning as pl
 import torch
 from methane import ImageDataset, weight_init
 from methane.data import load_train, load_test
-from methane.models import MethaneDetectionModel
+from methane.models import MethaneDetectionModel, Gasnet
 from pytorch_lightning.callbacks import EarlyStopping
 from sklearn.metrics import accuracy_score, classification_report
 from sklearn.model_selection import StratifiedKFold, train_test_split
@@ -79,7 +79,7 @@ def main(args):
 
     early_stopping_callback = EarlyStopping(
         monitor="val_loss",  # Monitor the validation loss
-        patience=20,  # Number of epochs with no improvement before stopping
+        patience=10,  # Number of epochs with no improvement before stopping
         mode="min",  # 'min' mode for loss (you can use 'max' for accuracy, etc.)
         verbose=True,  # Print messages about early stopping
     )
@@ -88,20 +88,22 @@ def main(args):
         max_epochs=100, callbacks=[early_stopping_callback], log_every_n_steps=5
     )
 
-    model = MethaneDetectionModel()
+    model = Gasnet()
     print("Initialize model")
     model.apply(weight_init)
     trainer.fit(model, train_loader, val_loader)
     output = trainer.predict(model, test_loader)
 
     predictions = []
+    probas = []
 
     for batch in output:
-        y_hat, _ = batch
+        proba, y_hat, _ = batch
         predictions.extend(y_hat.cpu().numpy())
+        probas.extend(proba.cpu().numpy())
 
     # Create a DataFrame
-    data = {"path": file_list, "label": predictions}
+    data = {"path": file_list, "label": probas}
     df = pd.DataFrame(data)
     # Specify the CSV file name
     csv_filename = "test.csv"
