@@ -1,13 +1,17 @@
+import pytorch_lightning as pl
 import torch
 import torch.nn as nn
-import torch.optim as optim
 import torch.nn.functional as F
+import torch.optim as optim
 from torch.utils.data import DataLoader
-
-import pytorch_lightning as pl
 
 
 class MethaneDetectionModel(pl.LightningModule):
+    """
+    Baseline model inspired from the following paper
+    https://paperswithcode.com/paper/190408500
+    """
+
     def __init__(self):
         super(MethaneDetectionModel, self).__init__()
         self.conv1 = nn.Conv2d(1, 16, kernel_size=3, stride=1, padding=1)

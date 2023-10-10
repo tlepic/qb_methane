@@ -1,17 +1,16 @@
-from methane import load_train, load_test, ImageDataset, weight_init
-
-import logging
-from sklearn.model_selection import StratifiedKFold, train_test_split
 import argparse
+import logging
+
 import numpy as np
 import pandas as pd
-import torch
-from torch.utils.data import DataLoader
-from sklearn.metrics import classification_report
-
 import pytorch_lightning as pl
+import torch
+from methane import ImageDataset, load_test, load_train, weight_init
 from methane.models import MethaneDetectionModel
 from pytorch_lightning.callbacks import EarlyStopping
+from sklearn.metrics import accuracy_score, classification_report
+from sklearn.model_selection import StratifiedKFold, train_test_split
+from torch.utils.data import DataLoader
 
 ap = argparse.ArgumentParser()
 
@@ -36,6 +35,7 @@ def main(args):
     kfold = StratifiedKFold(args.k_cv, shuffle=True, random_state=42)
 
     X = np.arange(len(X_train))
+    acc = []
     for fold, (train_idx, test_idx) in enumerate(kfold.split(X, y_train)):
         train_idx, val_idx = train_test_split(
             train_idx, test_size=0.2, random_state=42, stratify=y_train[train_idx]
@@ -87,7 +87,7 @@ def main(args):
         )
 
         trainer = pl.Trainer(
-            max_epochs=1, callbacks=[early_stopping_callback], log_every_n_steps=5
+            max_epochs=100, callbacks=[early_stopping_callback], log_every_n_steps=5
         )
 
         model = MethaneDetectionModel()
@@ -104,10 +104,23 @@ def main(args):
             predictions.extend(y_hat.cpu().numpy())
             ground_truth.extend(y.cpu().numpy())
 
+        acc.append(accuracy_score(ground_truth, predictions))
+
         print("---------------------------\n")
         print("Classification report")
         print(classification_report(ground_truth, predictions))
+        print("Global accuracy")
+        print(acc)
         print("---------------------------\n")
+
+    print("---------------------------\n")
+    print("Averaged results")
+    print(
+        "Average accuracy"
+        + "{:.2%}".format(np.mean(np.array(acc)))
+        + f" ± {np.std(np.array(acc))}"
+    )
+    print("---------------------------\n")
 
     return 0
 

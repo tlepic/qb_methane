@@ -1,13 +1,12 @@
+import os
 import pathlib
-from tqdm import tqdm
-import torch.nn.init as init
 
-import tifffile as tiff
 import numpy as np
 import pandas as pd
-
+import tifffile as tiff
 import torch.nn as nn
-
+import torch.nn.init as init
+from tqdm import tqdm
 
 # Use a context manager (with statement) to open the TIFF file
 
@@ -61,7 +60,7 @@ def load_test(dir_name, return_path=False):
         f"{len(X_test)} unique samples\n"
     )
     if return_path:
-        return np.array(X_test), np.array(y_test), str(file_list)
+        return np.array(X_test), np.array(y_test), os.listdir(data_dir)
 
     return np.array(X_test), np.array(y_test)
 
