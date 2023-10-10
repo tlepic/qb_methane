@@ -109,14 +109,12 @@ def main(args):
         print("---------------------------\n")
         print("Classification report")
         print(classification_report(ground_truth, predictions))
-        print("Global accuracy")
-        print(acc)
         print("---------------------------\n")
 
     print("---------------------------\n")
     print("Averaged results")
     print(
-        "Average accuracy"
+        "Average accuracy "
         + "{:.2%}".format(np.mean(np.array(acc)))
         + f" ± {np.std(np.array(acc))}"
     )
