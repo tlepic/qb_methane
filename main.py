@@ -7,8 +7,9 @@ import pytorch_lightning as pl
 import torch
 from methane import ImageDataset, weight_init
 from methane.data import load_train
-from methane.models import MethaneDetectionModel, Gasnet
+from methane.models import MethaneDetectionModel, Gasnet, SimplifiedGasnet, TestModel
 from pytorch_lightning.callbacks import EarlyStopping
+from pytorch_lightning.callbacks import ModelCheckpoint
 from sklearn.metrics import accuracy_score, classification_report, roc_auc_score
 from sklearn.model_selection import StratifiedKFold, train_test_split
 from torch.utils.data import DataLoader
@@ -18,7 +19,7 @@ ap = argparse.ArgumentParser()
 ap.add_argument("--data_dir", type=str, default="data")
 ap.add_argument("--k_cv", type=int, default=5)
 ap.add_argument("--batch_size", type=int, default=12)
-ap.add_argument("--model", type=str, default="gasnet")
+ap.add_argument("--model", type=str, default="test")
 
 logging.basicConfig(
     level=logging.INFO,  # Set the logging level
@@ -89,17 +90,33 @@ def main(args):
             verbose=True,
         )
 
-        trainer = pl.Trainer(
-            max_epochs=100, callbacks=[early_stopping_callback], log_every_n_steps=5
+        checkpoint_callback = ModelCheckpoint(
+            monitor='val_loss',
+            dirpath='your/save/directory/',
+            filename='best-checkpoint',
+            save_top_k=1,
+            mode='min'  # Minimize validation loss
         )
 
+        trainer = pl.Trainer(
+            max_epochs=100, 
+            callbacks=[early_stopping_callback, checkpoint_callback], 
+            log_every_n_steps=5
+        )
+
+        
         if args.model == "baseline":
             model = MethaneDetectionModel()
-        if args.model == "gasnet":
+        elif args.model == "gasnet":
             model = Gasnet()
+        elif args.model == "simple-gasnet":
+            model = SimplifiedGasnet()
+        elif args.model == "test":
+            model = TestModel()
         else:
             print("Provide valid model name")
             break
+
         print("Initialize model")
         model.apply(weight_init)
         trainer.fit(model, train_loader, val_loader)

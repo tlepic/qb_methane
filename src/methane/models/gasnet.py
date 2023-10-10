@@ -4,45 +4,45 @@ import torch.nn as nn
 import torch.nn.functional as F
 import pytorch_lightning as pl
 
-
 class Gasnet(pl.LightningModule):
     def __init__(self):
         super().__init__()
 
         # Conv-Pool Structure 1
-        self.conv1 = nn.Conv2d(1, 4, kernel_size=3)
+        self.conv1 = nn.Conv2d(1, 8, kernel_size=3, padding=1)
         self.pool1 = nn.MaxPool2d(2)
-        self.dropout1 = nn.Dropout(0.5)
-        self.batchnorm1 = nn.BatchNorm2d(4)
+        self.dropout1 = nn.Dropout(0.3)
+        self.batchnorm1 = nn.BatchNorm2d(8)
 
         # Conv-Pool Structure 2
-        self.conv2 = nn.Conv2d(4, 8, kernel_size=3)
+        self.conv2 = nn.Conv2d(8, 16, kernel_size=3, padding=1)
         self.pool2 = nn.MaxPool2d(2)
-        self.dropout2 = nn.Dropout(0.5)
-        self.batchnorm2 = nn.BatchNorm2d(8)
+        self.dropout2 = nn.Dropout(0.3)
+        self.batchnorm2 = nn.BatchNorm2d(16)
 
         # Fully Connected Layers
-        self.fc1 = nn.Linear(8 * 14 * 14, 2400)
-        self.fc2 = nn.Linear(2400, 32)
-        self.fc3 = nn.Linear(32, 1)
+        self.fc1 = nn.Linear(16 * 16 * 16, 512)
+        self.fc2 = nn.Linear(512, 64)
+        self.fc3 = nn.Linear(64, 1)
 
     def forward(self, x):
+        # First Conv-Pool
         x = self.conv1(x)
+        x = self.batchnorm1(x)
         x = F.relu(x)
         x = self.pool1(x)
         x = self.dropout1(x)
-        x = self.batchnorm1(x)
 
+        # Second Conv-Pool
         x = self.conv2(x)
+        x = self.batchnorm2(x)
         x = F.relu(x)
         x = self.pool2(x)
         x = self.dropout2(x)
-        x = self.batchnorm2(x)
 
-        x = x.view(x.size(0), -1)  # Flatten
-
+        x = x.view(x.size(0), -1)
         x = F.relu(self.fc1(x))
-        x = self.fc2(x)
+        x = F.relu(self.fc2(x))
         x = self.fc3(x)
 
         return x
@@ -78,5 +78,6 @@ class Gasnet(pl.LightningModule):
         return proba.view(-1), y_hat, y
 
     def configure_optimizers(self):
-        optimizer = optim.Adam(self.parameters(), lr=0.001)
-        return optimizer
+        optimizer = optim.Adam(self.parameters(), lr=0.001, weight_decay=1e-5)
+        scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.9)
+        return [optimizer], [scheduler]
