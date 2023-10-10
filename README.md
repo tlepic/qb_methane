@@ -24,4 +24,8 @@ pip install -e .
 ```bash
 $python main.py
 ```
+
+**Linting and formating**
+
 - Do not forget to use Black formatter before pushing to avoid linting conflicts
+- Please use isort extension to sort your imports
