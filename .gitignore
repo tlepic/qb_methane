@@ -165,3 +165,4 @@ train_data
 lightning_logs
 checkpoints
 *.csv
+.DS_Store
