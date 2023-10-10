@@ -55,7 +55,7 @@ class MethaneDetectionModel(pl.LightningModule):
         out = self(x)
         proba = F.sigmoid(out)
         y_hat = (proba > 0.5).int()
-        return proba, y_hat, y
+        return proba.view(-1), y_hat, y
 
     def configure_optimizers(self):
         optimizer = optim.Adam(self.parameters(), lr=0.001)

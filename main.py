@@ -9,7 +9,7 @@ from methane import ImageDataset, weight_init
 from methane.data import load_train
 from methane.models import MethaneDetectionModel
 from pytorch_lightning.callbacks import EarlyStopping
-from sklearn.metrics import accuracy_score, classification_report
+from sklearn.metrics import accuracy_score, classification_report, roc_auc_score
 from sklearn.model_selection import StratifiedKFold, train_test_split
 from torch.utils.data import DataLoader
 
@@ -37,6 +37,7 @@ def main(args):
 
     X = np.arange(len(X_train))
     acc = []
+    auc = []
     for fold, (train_idx, test_idx) in enumerate(kfold.split(X, y_train)):
         train_idx, val_idx = train_test_split(
             train_idx, test_size=0.2, random_state=42, stratify=y_train[train_idx]
@@ -88,7 +89,7 @@ def main(args):
         )
 
         trainer = pl.Trainer(
-            max_epochs=100, callbacks=[early_stopping_callback], log_every_n_steps=5
+            max_epochs=1, callbacks=[early_stopping_callback], log_every_n_steps=5
         )
 
         model = MethaneDetectionModel()
@@ -99,18 +100,22 @@ def main(args):
 
         predictions = []
         ground_truth = []
+        probas = []
 
         for batch in output:
-            y_hat, y = batch
+            proba, y_hat, y = batch
             predictions.extend(y_hat.cpu().numpy())
             ground_truth.extend(y.cpu().numpy())
-
-        acc.append(accuracy_score(ground_truth, predictions))
+            probas.extend(proba.cpu().numpy())
 
         print("---------------------------\n")
         print("Classification report")
         print(classification_report(ground_truth, predictions))
+        print(f"ROC-AUC {roc_auc_score(ground_truth, probas)}")
         print("---------------------------\n")
+
+        acc.append(accuracy_score(ground_truth, predictions))
+        auc.append(roc_auc_score(ground_truth, probas))
 
     print("---------------------------\n")
     print("Averaged results")
@@ -118,6 +123,11 @@ def main(args):
         "Average accuracy "
         + "{:.2%}".format(np.mean(np.array(acc)))
         + f" ± {np.std(np.array(acc))}"
+    )
+    print(
+        "Average ROC AUC "
+        + "{:.2%}".format(np.mean(np.array(auc)))
+        + f" ± {np.std(np.array(auc))}"
     )
     print("---------------------------\n")
 
