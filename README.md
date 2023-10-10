@@ -19,6 +19,8 @@ pip install -r requirements.txt
 pip install -e .
 ```
 
+- Unzip data inside the data folder
+
 - Run a cross validation for the baseline
 
 ```bash
