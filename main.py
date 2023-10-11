@@ -21,7 +21,7 @@ from torch.utils.data import DataLoader
 
 import cv2
 import random
-from data_augmentation import rotate_image, translate_image
+from src.methane.data_augmentation import rotate_image, translate_image
 
 
 # Étape 1 : Analyser les arguments de la ligne de commande

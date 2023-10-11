@@ -11,3 +11,5 @@ streamlit
 matplotlib
 basemap
 basemap-data-hires
+opencv-python
+data_augmentation
