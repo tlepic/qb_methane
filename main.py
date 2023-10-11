@@ -6,6 +6,8 @@ import pandas as pd
 import torch
 import pytorch_lightning as pl
 from PIL import Image
+from utils import visualize_with_data
+import pandas as pd
 
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from sklearn.metrics import accuracy_score, classification_report, roc_auc_score
@@ -17,6 +19,12 @@ from methane import ImageDataset, weight_init
 from methane.data import load_train
 from methane.models import Gasnet, Gasnet2, MethaneDetectionModel, SimplifiedGasnet, TestModel
 from methane.data.dataset import CheckedImageDataset
+
+# Before starting the training loop, load existing results if they exist
+if os.path.exists('results_table.csv'):
+    results_df = pd.read_csv('results_table.csv')
+else:
+    results_df = pd.DataFrame(columns=['Image Index', 'True Label', 'Predicted Label', 'Correct'])
 
 # Analyser les arguments de la ligne de commande
 ap = argparse.ArgumentParser()
@@ -33,7 +41,7 @@ logging.basicConfig(
 
 # Initialisation de random seed
 args = ap.parse_args()
-torch.manual_seed(17)
+torch.manual_seed(42)
 
 # ======================
 # Augmentation Pipeline
@@ -64,8 +72,7 @@ def get_transforms(augment=True):
         return transforms.Compose([
             transforms.Lambda(ensure_grayscale_shape),
         ])
-
-
+    
 # ======================
 # Model Fitting & Training
 # ======================
@@ -81,11 +88,12 @@ def main(args):
     Returns:
         int: Code de retour (0 pour succès).
     """
+    global results_df
 
     # Charger les données d'entraînement
     logging.info("Load train data")
     X_train, y_train = load_train(args.data_dir)
-   # Créer le jeu de données et effectuer une validation croisée en k-fold
+    # Créer le jeu de données et effectuer une validation croisée en k-fold
     logging.info("Creating dataset")
 
     kfold = StratifiedKFold(args.k_cv, shuffle=True, random_state=42)
@@ -93,6 +101,10 @@ def main(args):
     acc = []
     auc = []
     
+    all_misclassified_images = []
+    all_titles = []
+    all_data = []
+
     for fold, (train_idx, test_idx) in enumerate(kfold.split(X, y_train)):
         # Data Splitting
         train_idx, val_idx = train_test_split(
@@ -180,7 +192,29 @@ def main(args):
             predictions.extend(y_hat.cpu().numpy())
             ground_truth.extend(y.cpu().numpy())
             probas.extend(proba.cpu().numpy())
+
         
+        for i, ((proba, y_hat, y), batch_indices) in enumerate(zip(output, test_idx)):
+            correct = (y_hat.cpu().squeeze() == y.cpu().squeeze()).numpy().astype(int)
+            batch_df = pd.DataFrame({
+                'Image Index': batch_indices,
+                'True Label': y.cpu().squeeze().numpy(),
+                'Predicted Label': y_hat.cpu().squeeze().numpy(),
+                'Correct': correct
+            })
+            results_df = pd.concat([results_df, batch_df], ignore_index=True)
+    
+        # Save the results table to a CSV file for later reference (optional)
+        results_df.to_csv('results_table.csv', index=False)
+
+        all_images = [X_train[idx] for idx in results_df['Image Index']]
+        titles = [f"True: {row['True Label']}, Pred: {row['Predicted Label']}" for _, row in results_df.iterrows()]
+        accumulated_accuracy = np.mean(results_df['Correct'].cumsum().values / (results_df.index + 1))
+        data = [f"Accumulated Accuracy: {accumulated_accuracy:.2%}" for _ in results_df.iterrows()]
+
+        # Visualize all images with accumulated data
+        visualize_with_data(all_images, titles, data)
+
         logging.info("Classification report")
         logging.info(classification_report(ground_truth, predictions))
         logging.info(f"ROC-AUC {roc_auc_score(ground_truth, probas)}")
@@ -202,6 +236,17 @@ def main(args):
         + "± {:.2%}".format(np.std(np.array(auc)))
     )
     print("---------------------------\n")
+
+    # Accumulate accuracy data
+    accumulated_accuracy = np.mean(results_df['Correct'].cumsum().values / (results_df.index + 1))
+
+    # Assuming X_train is a list/array of images
+    all_images = [X_train[idx] for idx in results_df['Image Index']]
+    titles = [f"True: {row['True Label']}, Pred: {row['Predicted Label']}" for _, row in results_df.iterrows()]
+    data = [f"Accumulated Accuracy: {accumulated_accuracy:.2%}" for _ in misclassified_rows.iterrows()]
+
+    # Visualize misclassified images with accumulated data
+    visualize_with_data(all_images, titles, data)
 
     return 0
 
