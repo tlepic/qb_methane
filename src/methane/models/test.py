@@ -1,8 +1,10 @@
+import pytorch_lightning as pl
 import torch
-import torch.optim as optim
 import torch.nn as nn
 import torch.nn.functional as F
-import pytorch_lightning as pl
+import torch.optim as optim
+from torchmetrics.classification import BinaryAccuracy, BinaryAUROC
+
 
 class TestModel(pl.LightningModule):
     def __init__(self):
@@ -56,6 +58,12 @@ class TestModel(pl.LightningModule):
         criterion = torch.nn.BCEWithLogitsLoss()
         loss = criterion(y_hat, y.float())
         self.log("train_loss", loss)
+        acc = BinaryAccuracy()
+        auc = BinaryAUROC()
+        accuracy = acc(y_hat, y)
+        aucroc = auc(y_hat, y)
+        self.log("train_acc", accuracy, prog_bar=True)
+        self.log("train_roc_auc", aucroc, prog_bar=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -67,6 +75,12 @@ class TestModel(pl.LightningModule):
         criterion = torch.nn.BCEWithLogitsLoss()
         loss = criterion(y_hat, y.float())
         self.log("val_loss", loss)
+        acc = BinaryAccuracy()
+        auc = BinaryAUROC()
+        accuracy = acc(y_hat, y)
+        aucroc = auc(y_hat, y)
+        self.log("val_acc", accuracy, prog_bar=True)
+        self.log("val_roc_auc", aucroc, prog_bar=True)
 
     def predict_step(self, batch, batch_idx):
         x, y = batch
