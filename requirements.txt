@@ -111,3 +111,8 @@ urllib3==2.0.6
 wcwidth==0.2.8
 yarl==1.9.2
 zipp @ file:///croot/zipp_1672387121353/work
+
+streamlit
+matplotlib
+basemap
+basemap-data-hires

@@ -9,65 +9,60 @@ import torch
 
 from methane import ImageDataset, weight_init
 from methane.data import load_train
-from methane.models import MethaneDetectionModel
+from methane.models import (
+    Gasnet,
+    Gasnet2,
+    MethaneDetectionModel,
+    SimplifiedGasnet,
+    TestModel,
+)
 from methane.data.dataset import CheckedImageDataset
 
-from pytorch_lightning.callbacks import EarlyStopping
+from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from sklearn.metrics import accuracy_score, classification_report, roc_auc_score
 from sklearn.model_selection import StratifiedKFold, train_test_split
 from torch.utils.data import DataLoader
 from torchvision import transforms
 
+
+
+# Étape 1 : Analyser les arguments de la ligne de commande
 ap = argparse.ArgumentParser()
 
 ap.add_argument("--data_dir", type=str, default="data")
 ap.add_argument("--k_cv", type=int, default=5)
 ap.add_argument("--batch_size", type=int, default=12)
+ap.add_argument("--model", type=str, default="test")
 
+# Étape 2 : Configurer les journaux
 logging.basicConfig(
     level=logging.INFO,  # Set the logging level
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",  # Set the log message format
 )
 
+# Étape 3 : Initialisation de random seed
 args = ap.parse_args()
 torch.manual_seed(42)
 
-# ======================
-# Utility Functions
-# ======================
 
-def ensure_grayscale_shape(img_tensor):
-    if len(img_tensor.shape) == 2:
-        img_tensor = img_tensor.unsqueeze(0)  # Add a channel dimension
-    return img_tensor
-
-
-class PrintShapeTransform:
-    def __call__(self, img):
-        print("Shape after transformations:", img.shape)
-        return img
-
-# ======================
-# Augmentation Pipeline
-# ======================
-
-augmentation_pipeline = transforms.Compose([
-    transforms.Lambda(ensure_grayscale_shape),
-    transforms.RandomHorizontalFlip(),
-    transforms.RandomVerticalFlip(),
-    transforms.RandomRotation(degrees=30),
-    PrintShapeTransform()  # Add this line to your transformations
-])
-
-# ======================
-# Main Function
-# ======================
-
+# Étape 4 : Définir la fonction principale
 def main(args):
+    """
+    Fonction principale pour l'entraînement et l'évaluation du modèle.
+
+    Args:
+        args (argparse.Namespace): Arguments de la ligne de commande.
+
+    Returns:
+        int: Code de retour (0 pour succès).
+    """
+
+    # Charger les données d'entraînement
     logging.info("Load train data")
     X_train, y_train = load_train(args.data_dir)
-    logging.info("Stratifying data")
-    
+   # Créer le jeu de données et effectuer une validation croisée en k-fold
+    logging.info("Creating dataset")
+
     kfold = StratifiedKFold(args.k_cv, shuffle=True, random_state=42)
     X = np.arange(len(X_train))
     acc = []
@@ -108,6 +103,7 @@ def main(args):
         logging.info(f"The val_ds size {len(val_ds)}")
         logging.info(f"The test_ds size {len(test_ds)}")
 
+
         # Inspect some batches from the DataLoader
         for i, (batch, _) in enumerate(train_loader):
             logging.info(f"Batch {i} shape in train_loader: {batch.shape}")
@@ -129,13 +125,36 @@ def main(args):
         # ======================
 
         early_stopping_callback = EarlyStopping(monitor="val_loss", patience=10, mode="min", verbose=True)
-        trainer = pl.Trainer(max_epochs=1, callbacks=[early_stopping_callback], log_every_n_steps=5)
+        trainer = pl.Trainer(max_epochs=100,  # Theo had 1
+            callbacks=[early_stopping_callback, checkpoint_callback],
+            log_every_n_steps=5,)
 
-        model = MethaneDetectionModel()
-        logging.info("Initialize model")
+        checkpoint_callback = ModelCheckpoint(
+            save_top_k=1,
+            monitor="val_loss",
+            mode="min",
+            filename="best-model-{epoch:02d}-{val_loss:.2f}",
+        )
+
+
+        if args.model == "baseline":
+            model = MethaneDetectionModel()
+        elif args.model == "gasnet":
+            model = Gasnet()
+        elif args.model == "simple-gasnet":
+            model = SimplifiedGasnet()
+        elif args.model == "gasnet_2":
+            model = Gasnet2()
+        elif args.model == "test":
+            model = TestModel()
+        else:
+            print("Provide valid model name")
+            break
+
+        print("Initialize model")
         model.apply(weight_init)
         trainer.fit(model, train_loader, val_loader)
-        output = trainer.predict(model, test_loader)
+        output = trainer.predict(model, test_loader, ckpt_path="best")
 
         # ======================
         # Evaluation
@@ -157,12 +176,24 @@ def main(args):
         acc.append(accuracy_score(ground_truth, predictions))
         auc.append(roc_auc_score(ground_truth, probas))
 
-    logging.info("Averaged results")
-    logging.info(f"Average accuracy: {np.mean(np.array(acc))*100:.2f}% ± {np.std(np.array(acc))}")
-    logging.info(f"Average ROC AUC: {np.mean(np.array(auc))*100:.2f}% ± {np.std(np.array(auc))}")
+        # Afficher les résultats agrégés
+    print("---------------------------\n")
+    print("Averaged results")
+    print(
+        "Average accuracy "
+        + "{:.2%}".format(np.mean(np.array(acc)))
+        + "± {:.2%}".format(np.std(np.array(acc)))
+    )
+    print(
+        "Average ROC AUC "
+        + "{:.2%}".format(np.mean(np.array(auc)))
+        + "± {:.2%}".format(np.std(np.array(auc)))
+    )
+    print("---------------------------\n")
 
     return 0
 
 
+# Exécuter la fonction principale
 if __name__ == "__main__":
     main(args)
