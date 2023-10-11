@@ -26,7 +26,6 @@ logging.basicConfig(
 
 args = ap.parse_args()
 
-
 def main(args):
     logging.info("Load train data")
     X_train, y_train = load_train(args.data_dir)
@@ -78,10 +77,10 @@ def main(args):
     print(f"The test_ds size {len(test_ds)}")
 
     early_stopping_callback = EarlyStopping(
-        monitor="val_loss",  # Monitor the validation loss
-        patience=10,  # Number of epochs with no improvement before stopping
-        mode="min",  # 'min' mode for loss (you can use 'max' for accuracy, etc.)
-        verbose=True,  # Print messages about early stopping
+        monitor="val_loss",
+        patience=10,
+        mode="min",
+        verbose=True,
     )
 
     checkpoint_callback = ModelCheckpoint(
