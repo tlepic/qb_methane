@@ -20,6 +20,7 @@ from sklearn.model_selection import StratifiedKFold, train_test_split
 from torch.utils.data import DataLoader
 
 import cv2
+import random
 from data_augmentation import rotate_image, translate_image
 
 
@@ -82,11 +83,16 @@ def main(args):
         # Appliquer la data augmentation aux images
         augmented_X_fold_train = []
         augmented_y_fold_train = []
+        possible_angles = [45, 90, 135]
         for image, label in zip(X_fold_train, y_fold_train):
-        # Appliquer la rotation par exemple
-        augmented_image = rotate_image(image, angle=45)  # Vous pouvez ajuster l'angle
-        augmented_X_fold_train.append(augmented_image)
-        augmented_y_fold_train.append(label)
+            # Sélectionner un angle de rotation aléatoire parmi les possibilités
+            random_rotation_angle = random.choice(possible_angles)
+            
+            # Appliquer la rotation avec l'angle aléatoire
+            augmented_image = rotate_image(image, angle=random_rotation_angle)
+            
+            augmented_X_fold_train.append(augmented_image)
+            augmented_y_fold_train.append(label)
     
         X_fold_train = np.array(augmented_X_fold_train)
         y_fold_train = np.array(augmented_y_fold_train)
