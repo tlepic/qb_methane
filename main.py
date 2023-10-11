@@ -7,7 +7,13 @@ import pytorch_lightning as pl
 import torch
 from methane import ImageDataset, weight_init
 from methane.data import load_train
-from methane.models import MethaneDetectionModel, Gasnet, Gasnet2, SimplifiedGasnet, TestModel
+from methane.models import (
+    Gasnet,
+    Gasnet2,
+    MethaneDetectionModel,
+    SimplifiedGasnet,
+    TestModel,
+)
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from sklearn.metrics import accuracy_score, classification_report, roc_auc_score
 from sklearn.model_selection import StratifiedKFold, train_test_split
@@ -31,6 +37,7 @@ logging.basicConfig(
 args = ap.parse_args()
 torch.manual_seed(42)
 
+
 # Étape 4 : Définir la fonction principale
 def main(args):
     """
@@ -42,11 +49,11 @@ def main(args):
     Returns:
         int: Code de retour (0 pour succès).
     """
-    
+
     # Charger les données d'entraînement
     logging.info("Load train data")
     X_train, y_train = load_train(args.data_dir)
-    
+
     # Créer le jeu de données et effectuer une validation croisée en k-fold
     logging.info("Creating dataset")
     kfold = StratifiedKFold(args.k_cv, shuffle=True, random_state=42)
@@ -112,11 +119,11 @@ def main(args):
         )
 
         trainer = pl.Trainer(
-            max_epochs=100, # Theo had 1
-            callbacks=[early_stopping_callback, checkpoint_callback], 
-            log_every_n_steps=5
+            max_epochs=100,  # Theo had 1
+            callbacks=[early_stopping_callback, checkpoint_callback],
+            log_every_n_steps=5,
         )
-        
+
         if args.model == "baseline":
             model = MethaneDetectionModel()
         elif args.model == "gasnet":
@@ -171,6 +178,7 @@ def main(args):
     print("---------------------------\n")
 
     return 0
+
 
 # Exécuter la fonction principale
 if __name__ == "__main__":
