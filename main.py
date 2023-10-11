@@ -26,12 +26,12 @@ logging.basicConfig(
 )
 
 args = ap.parse_args()
-torch.manual_seed(42)
+torch.manual_seed(4)
 
 
 def main(args):
     logging.info("Load train data")
-    X_train, y_train = load_train(args.data_dir)
+    X_train, y_train, X_extra_feature = load_train(args.data_dir, extra_feature=True)
 
     logging.info("Creating dataset")
     kfold = StratifiedKFold(args.k_cv, shuffle=True, random_state=42)
@@ -41,22 +41,38 @@ def main(args):
     auc = []
     for fold, (train_idx, test_idx) in enumerate(kfold.split(X, y_train)):
         train_idx, val_idx = train_test_split(
-            train_idx, test_size=0.2, random_state=42, stratify=y_train[train_idx]
+            train_idx, test_size=0.2, random_state=4, stratify=y_train[train_idx]
         )
         print("---------------------------\n")
         print(f"Starting fold {fold+1}/{args.k_cv}")
         # set the training and validation folds
         X_fold_train = X_train[train_idx]
+        X_fold_extra_train = X_extra_feature[train_idx]
         y_fold_train = y_train[train_idx]
         X_fold_val = X_train[val_idx]
+        X_fold_extra_val = X_extra_feature[val_idx]
         y_fold_val = y_train[val_idx]
         X_fold_test = X_train[test_idx]
+        X_fold_extra_test = X_extra_feature[test_idx]
         y_fold_test = y_train[test_idx]
 
         # Def datasets
-        train_ds = ImageDataset(torch.tensor(X_fold_train), torch.tensor(y_fold_train))
-        val_ds = ImageDataset(torch.tensor(X_fold_val), torch.tensor(y_fold_val))
-        test_ds = ImageDataset(torch.tensor(X_fold_test), torch.tensor(y_fold_test))
+        train_ds = ImageDataset(
+            torch.tensor(X_fold_train),
+            torch.tensor(y_fold_train),
+            extra_feature=torch.tensor(X_fold_extra_train),
+        )
+
+        val_ds = ImageDataset(
+            torch.tensor(X_fold_val),
+            torch.tensor(y_fold_val),
+            extra_feature=torch.tensor(X_fold_extra_val),
+        )
+        test_ds = ImageDataset(
+            torch.tensor(X_fold_test),
+            torch.tensor(y_fold_test),
+            extra_feature=torch.tensor(X_fold_extra_test),
+        )
 
         train_loader = DataLoader(
             train_ds,
@@ -97,7 +113,7 @@ def main(args):
         )
 
         trainer = pl.Trainer(
-            max_epochs=1,
+            max_epochs=100,
             callbacks=[early_stopping_callback, checkpoint_callback],
             log_every_n_steps=5,
         )

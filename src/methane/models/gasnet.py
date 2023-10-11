@@ -10,7 +10,7 @@ class Gasnet(pl.LightningModule):
         super().__init__()
 
         # Conv-Pool Structure 1
-        self.conv1 = nn.Conv2d(1, 4, kernel_size=3)
+        self.conv1 = nn.Conv2d(2, 4, kernel_size=3)
         self.pool1 = nn.MaxPool2d(2)
         self.dropout1 = nn.Dropout(0.5)
         self.batchnorm1 = nn.BatchNorm2d(4)
