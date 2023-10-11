@@ -7,7 +7,7 @@ import pytorch_lightning as pl
 import torch
 from methane import ImageDataset, weight_init
 from methane.data import load_train
-from methane.models import MethaneDetectionModel, Gasnet, SimplifiedGasnet, TestModel
+from methane.models import MethaneDetectionModel, Gasnet, Gasnet2, SimplifiedGasnet, TestModel
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from sklearn.metrics import accuracy_score, classification_report, roc_auc_score
 from sklearn.model_selection import StratifiedKFold, train_test_split
@@ -132,6 +132,8 @@ def main(args):
             model = Gasnet()
         elif args.model == "simple-gasnet":
             model = SimplifiedGasnet()
+        elif args.model == "gasnet_2":
+            model = Gasnet2()
         elif args.model == "test":
             model = TestModel()
         else:

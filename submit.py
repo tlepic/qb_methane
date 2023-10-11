@@ -7,7 +7,7 @@ import pytorch_lightning as pl
 import torch
 from methane import ImageDataset, weight_init
 from methane.data import load_test, load_train
-from methane.models import Gasnet, MethaneDetectionModel
+from methane.models import Gasnet2
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from sklearn.metrics import accuracy_score, classification_report
 from sklearn.model_selection import StratifiedKFold, train_test_split
@@ -97,7 +97,7 @@ def main(args):
         log_every_n_steps=5,
     )
 
-    model = Gasnet()
+    model = Gasnet2()
     print("Initialize model")
     model.apply(weight_init)
     trainer.fit(model, train_loader, val_loader)
