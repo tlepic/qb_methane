@@ -94,8 +94,13 @@ def main(args):
             augmented_X_fold_train.append(augmented_image)
             augmented_y_fold_train.append(label)
     
-        X_fold_train = np.array(augmented_X_fold_train)
-        y_fold_train = np.array(augmented_y_fold_train)
+        # Convertir les listes en tableaux NumPy
+        augmented_X_fold_train = np.array(augmented_X_fold_train)
+        augmented_y_fold_train = np.array(augmented_y_fold_train)
+
+        # Fusionner les données d'entraînement d'origine avec les données augmentées
+        X_fold_train = np.concatenate((X_fold_train, augmented_X_fold_train), axis=0)
+        y_fold_train = np.concatenate((y_fold_train, augmented_y_fold_train), axis=0)
 
         # Def datasets
         train_ds = ImageDataset(torch.tensor(X_fold_train), torch.tensor(y_fold_train))
