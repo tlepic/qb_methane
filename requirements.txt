@@ -7,3 +7,7 @@ pandas
 pytorch_lightning
 tifffile
 scikit-learn
+streamlit
+matplotlib
+basemap
+basemap-data-hires
