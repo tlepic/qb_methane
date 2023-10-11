@@ -1,0 +1,24 @@
+#arguments
+--data_dir: "data"
+--k_cv: 5
+--batch_size: 12
+--model: "gasnet"
+
+#ModelCheckpoint
+checkpoint_callback = ModelCheckpoint(
+save_top_k: 1
+monitor: "val_loss"
+mode: min
+filename: "best-model-{epoch:02d}-{val_loss:.2f}"
+
+#EarlyStopping
+monitor: "val_loss"
+patience: 10
+mode: "min"
+verbose: True
+
+#Trainer
+max_epochs=: 1
+callbacks=: [early_stopping_callback, checkpoint_callback]
+log_every_n_steps: 5
+

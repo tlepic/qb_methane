@@ -7,7 +7,7 @@ import pytorch_lightning as pl
 import torch
 from methane import ImageDataset, weight_init
 from methane.data import load_test, load_train
-from methane.models import Gasnet, MethaneDetectionModel
+from methane.models import Gasnet2
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from sklearn.metrics import accuracy_score, classification_report
 from sklearn.model_selection import StratifiedKFold, train_test_split
@@ -25,7 +25,6 @@ logging.basicConfig(
 )
 
 args = ap.parse_args()
-
 
 def main(args):
     logging.info("Load train data")
@@ -78,10 +77,10 @@ def main(args):
     print(f"The test_ds size {len(test_ds)}")
 
     early_stopping_callback = EarlyStopping(
-        monitor="val_loss",  # Monitor the validation loss
-        patience=10,  # Number of epochs with no improvement before stopping
-        mode="min",  # 'min' mode for loss (you can use 'max' for accuracy, etc.)
-        verbose=True,  # Print messages about early stopping
+        monitor="val_loss",
+        patience=10,
+        mode="min",
+        verbose=True,
     )
 
     checkpoint_callback = ModelCheckpoint(
@@ -97,7 +96,7 @@ def main(args):
         log_every_n_steps=5,
     )
 
-    model = Gasnet()
+    model = Gasnet2()
     print("Initialize model")
     model.apply(weight_init)
     trainer.fit(model, train_loader, val_loader)
