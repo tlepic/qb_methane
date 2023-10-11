@@ -13,6 +13,10 @@ from sklearn.metrics import accuracy_score, classification_report, roc_auc_score
 from sklearn.model_selection import StratifiedKFold, train_test_split
 from torch.utils.data import DataLoader
 
+import cv2
+from data_augmentation import rotate_image, translate_image
+
+
 # Étape 1 : Analyser les arguments de la ligne de commande
 ap = argparse.ArgumentParser()
 
@@ -67,6 +71,18 @@ def main(args):
         y_fold_val = y_train[val_idx]
         X_fold_test = X_train[test_idx]
         y_fold_test = y_train[test_idx]
+
+        # Appliquer la data augmentation aux images
+        augmented_X_fold_train = []
+        augmented_y_fold_train = []
+        for image, label in zip(X_fold_train, y_fold_train):
+        # Appliquer la rotation par exemple
+        augmented_image = rotate_image(image, angle=45)  # Vous pouvez ajuster l'angle
+        augmented_X_fold_train.append(augmented_image)
+        augmented_y_fold_train.append(label)
+    
+        X_fold_train = np.array(augmented_X_fold_train)
+        y_fold_train = np.array(augmented_y_fold_train)
 
         # Def datasets
         train_ds = ImageDataset(torch.tensor(X_fold_train), torch.tensor(y_fold_train))
