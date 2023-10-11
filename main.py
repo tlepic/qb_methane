@@ -111,20 +111,11 @@ def main(args):
             verbose=True,
         )
 
-        checkpoint_callback = ModelCheckpoint(
-            monitor='val_loss',
-            dirpath='your/save/directory/',
-            filename='best-checkpoint',
-            save_top_k=1,
-            mode='min'
-        )
-
         trainer = pl.Trainer(
             max_epochs=100, # Theo had 1
             callbacks=[early_stopping_callback, checkpoint_callback], 
             log_every_n_steps=5
         )
-
         
         if args.model == "baseline":
             model = MethaneDetectionModel()

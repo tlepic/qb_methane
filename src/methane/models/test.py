@@ -11,13 +11,13 @@ class TestModel(pl.LightningModule):
         # Conv-Pool Structure 1
         self.conv1 = nn.Conv2d(1, 8, kernel_size=3, padding=1)
         self.pool1 = nn.MaxPool2d(2)
-        self.dropout1 = nn.Dropout(0.25)
+        self.dropout1 = nn.Dropout(0.3)
         self.batchnorm1 = nn.BatchNorm2d(8)
 
         # Conv-Pool Structure 2
         self.conv2 = nn.Conv2d(8, 16, kernel_size=3, padding=1)
         self.pool2 = nn.MaxPool2d(2)
-        self.dropout2 = nn.Dropout(0.25)
+        self.dropout2 = nn.Dropout(0.3)
         self.batchnorm2 = nn.BatchNorm2d(16)
 
         # Fully Connected Layers
