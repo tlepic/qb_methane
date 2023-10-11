@@ -1,12 +1,15 @@
 import streamlit as st
 import pandas as pd
-import folium
-from PIL import Image
+import matplotlib.pyplot as plt
+from mpl_toolkits.basemap import Basemap
+# from ???.py import model
 
-# Useful functions
-def image_location(image_name):
+### Useful functions ###
+
+# Get image informations
+def image_infos(image_name):
     # Read the metadata.csv file
-    metadata_df = pd.read_csv("data/test_data/metadata.csv")
+    metadata_df = pd.read_csv("data/test data/metadata.csv")
 
     # Get image id
     image_id = image_name[-8:-4]
@@ -17,23 +20,40 @@ def image_location(image_name):
     # Extract the latitude and longitude values
     latitude = image_metadata["lat"].values[0]
     longitude = image_metadata["lon"].values[0]
+    location = [latitude, longitude]
 
-    # Create a map centered at the image location
-    m = folium.Map(location=[latitude, longitude], zoom_start=10)
+    # Extract plume coordinates on picture
+    coord_x = image_metadata["coord_x"].values[0]
+    coord_y = image_metadata["coord_y"].values[0]
+    coords = [coord_x, coord_y]
 
-    # Add a marker to the map
-    folium.Marker([latitude, longitude], popup=image_name).add_to(m)
+    return location, coords
 
-    return m
+# Get satellite view of location
+def plot_satellite_image(latitude, longitude):
+    fig = plt.figure(figsize=(10, 10))
+    m = Basemap(epsg=3857, projection='merc', llcrnrlat=latitude-0.01, urcrnrlat=latitude+0.01, llcrnrlon=longitude-0.01, urcrnrlon=longitude+0.01, resolution='h')
+    m.arcgisimage(service='World_Imagery', xpixels=700, verbose=False)
+    ### ADD LEGEND WITH COORDINATES ###
+    plt.savefig('app/satellite_image.png')  # Save the plotted image
+
+# Create session state elements
+if 'image' not in st.session_state:
+    st.session_state.image = None
+if 'loc' not in st.session_state:
+    st.session_state.loc = None
+if 'coords' not in st.session_state:
+    st.session_state.coords = None
+
 
 def main():
     # Set CSS
-    with open("assets/theme.css") as f:
+    with open("app/assets/theme.css") as f:
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
     
     # Set sidebar
     with st.sidebar:
-        st.image("assets/cleanr.png")
+        st.image("app/assets/cleanr.png")
 
         # Text markdown settings
         st.sidebar.markdown(
@@ -57,56 +77,72 @@ def main():
         </div>
         """,
         unsafe_allow_html=True)
-
-        # Set pages options
-        page = st.radio("Please select your use case", ["Detect a plume on an image",
-                                                        "See current plumes locations"])
+        if st.button("Analyze a new image"):
+            st.session_state.image = None
+            st.session_state.loc = None
+            st.session_state.coords = None
 
     # Methane Plume Detector
-    if page == "Detect a plume on an image":
-        st.title("🔎 🏭 Detect a plume on an image")
-        uploaded_file = st.file_uploader("Please upload your image",
-                                 type=["tiff"],
-                                 accept_multiple_files=False)
+    st.title("🔎 🏭 Detect a methane plume on an image")
+    uploaded_file = st.file_uploader("Please upload your image and click on 'Analyze image'",
+                                        type=["tiff"],
+                                        accept_multiple_files=False)
         
-        if uploaded_file:
-            with st.spinner("Uploading satellite image"):
-                ### INSERT MODEL ###
-                ### TBU: multiple images, local path, function, color plume ###
-                image = Image.open(uploaded_file)
-                image = image.convert("RGB")  # Convert to RGB format
-                image.save("temp_image.png", "PNG")  # Save the image as PNG
-                st.success("Image uploaded!")
-            
-        col1, col2, col3 = st.columns(3)
-            
+    if st.button('Analyze image'):
+        with st.spinner("Uploading satellite image"):
+            # Get image informations (location and coordinates)
+            st.session_state.loc, st.session_state.coords = image_infos(uploaded_file.name)
+
+            # Get satellite image
+            if st.session_state.image == None:
+                plot_satellite_image(st.session_state.loc[0], st.session_state.loc[1])
+                st.session_state.image = "app/satellite_image.png"
+
+            ### INSERT MODEL ###
+            # output = model.predict(uploaded_file.name)
+            st.success("Image uploaded!")
+
+    if st.session_state.image != None:
+        display = st.radio("Select what you want to do", ["Display satellite view",
+                                                            "Search methane plume",
+                                                            "See plumes map"], horizontal=True)
+        
         # Display the uploaded image
-        if col1.button("Display uploaded image"):
-            st.image("temp_image.png", caption=uploaded_file.name, use_column_width=True)
+        if display == "Display satellite view":
+            st.image(st.session_state.image, caption=uploaded_file.name, use_column_width=True)
 
         # Display the result
-        if col2.button("Check if there is a plume"):
+        if display == "Search methane plume":
             ### INSERT MODEL RESULTS ###
+            # st.info(output)
             st.info("Yes")
-        
+            
         # Display the map
-        if col3.button("See image location"):
-            # Display the map in Streamlit
-            #m = image_location(uploaded_file.name)
-            #st.markdown("## Image Location on Map")
-            #st.write(m, unsafe_allow_html=True)
+        if display == "See plumes map":
+            # Add color to dataset
+            df = pd.read_csv("data/train data/metadata.csv")
+            df['color'] = df['plume'].apply(lambda x: '#FF0000' if x == 'yes' else '#00FF00')
 
-            # Create a new row of data
-            new_row = {'Column1': 4, 'Column2': 'D'}
-            #new_row = {date,id_coord,plume,set,lat,lon,coord_x,coord_y,path}
-            #df = df.append(new_row, ignore_index=True)
+            new_row = pd.DataFrame({
+                'date': [" "],
+                'id_coord': [" "],
+                'plume': [" "],
+                'set': [" "],
+                'lat': [st.session_state.loc[0]],
+                'lon': [st.session_state.loc[1]],
+                'coord_x': [st.session_state.coords[0]],
+                'coord_y': [st.session_state.coords[1]],
+                'path': [" "],
+                'color': ['#0000FF']
+            })
 
-    # Map of the plumes locations
-    if page == "See current plumes locations":
-        df = pd.read_csv("data/train_data/metadata.csv")
-        df['color'] = df['plume'].apply(lambda x: '#FF0000' if x == 'yes' else '#00FF00')
-        st.map(df, color='color')
-        st.markdown(":green[No methane plume] :red[Methane plume]")
+            df = pd.concat([df, new_row], ignore_index=True)
+
+            st.map(df, color='color', zoom=1)
+            st.info("##### Legend:" + "\n"
+            +"- :green[No methane plume]" + "\n"
+            + "- :red[Methane plume]" + "\n"
+            + "- :blue[Current plume under analysis]")
 
 
 if __name__ == "__main__":
