@@ -13,6 +13,7 @@ from methane.models import (
     MethaneDetectionModel,
     SimplifiedGasnet,
     TestModel,
+    CustomDenseNet,
 )
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from sklearn.metrics import accuracy_score, classification_report, roc_auc_score
@@ -25,7 +26,7 @@ ap = argparse.ArgumentParser()
 ap.add_argument("--data_dir", type=str, default="data")
 ap.add_argument("--k_cv", type=int, default=5)
 ap.add_argument("--batch_size", type=int, default=12)
-ap.add_argument("--model", type=str, default="test")
+ap.add_argument("--model", type=str, default="CustomDenseNet")
 
 # Étape 2 : Configurer les journaux
 logging.basicConfig(
@@ -134,12 +135,14 @@ def main(args):
             model = Gasnet2()
         elif args.model == "test":
             model = TestModel()
+        elif args.model == "CustomDenseNet":
+            model = CustomDenseNet()
         else:
             print("Provide valid model name")
             break
 
         print("Initialize model")
-        model.apply(weight_init)
+        # model.apply(weight_init)
         trainer.fit(model, train_loader, val_loader)
         output = trainer.predict(model, test_loader, ckpt_path="best")
 
