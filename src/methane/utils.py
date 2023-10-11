@@ -1,4 +1,7 @@
 import os
+import random
+import torch
+import numpy as np
 import torch.nn as nn
 import torch.nn.init as init
 
@@ -75,3 +78,9 @@ def weight_init(m):
                 init.orthogonal_(param.data)
             else:
                 init.normal_(param.data)
+
+
+def seed_everything(seed=42):
+    random.seed(seed)
+    torch.manual_seed(seed)
+    np.random.seed(seed)
