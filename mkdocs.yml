@@ -1,0 +1,8 @@
+site_name: Methane_detector
+site_url: https://example.com/
+nav:
+  - Home: index.md
+  - About: about.md
+theme: readthedocs
+extra:
+  favicon: img/favicon.ico  # Chemin vers l'icône favicon personnalisée

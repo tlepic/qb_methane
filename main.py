@@ -8,12 +8,12 @@ import torch
 from methane import ImageDataset, weight_init
 from methane.data import load_train
 from methane.models import MethaneDetectionModel, Gasnet, SimplifiedGasnet, TestModel
-from pytorch_lightning.callbacks import EarlyStopping
-from pytorch_lightning.callbacks import ModelCheckpoint
+from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from sklearn.metrics import accuracy_score, classification_report, roc_auc_score
 from sklearn.model_selection import StratifiedKFold, train_test_split
 from torch.utils.data import DataLoader
 
+# Étape 1 : Analyser les arguments de la ligne de commande
 ap = argparse.ArgumentParser()
 
 ap.add_argument("--data_dir", type=str, default="data")
@@ -21,19 +21,33 @@ ap.add_argument("--k_cv", type=int, default=5)
 ap.add_argument("--batch_size", type=int, default=12)
 ap.add_argument("--model", type=str, default="test")
 
+# Étape 2 : Configurer les journaux
 logging.basicConfig(
     level=logging.INFO,  # Set the logging level
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",  # Set the log message format
 )
 
+# Étape 3 : Initialisation de random seed
 args = ap.parse_args()
 torch.manual_seed(42)
 
-
+# Étape 4 : Définir la fonction principale
 def main(args):
+    """
+    Fonction principale pour l'entraînement et l'évaluation du modèle.
+
+    Args:
+        args (argparse.Namespace): Arguments de la ligne de commande.
+
+    Returns:
+        int: Code de retour (0 pour succès).
+    """
+    
+    # Charger les données d'entraînement
     logging.info("Load train data")
     X_train, y_train = load_train(args.data_dir)
-
+    
+    # Créer le jeu de données et effectuer une validation croisée en k-fold
     logging.info("Creating dataset")
     kfold = StratifiedKFold(args.k_cv, shuffle=True, random_state=42)
 
@@ -83,6 +97,13 @@ def main(args):
         print(f"The val_ds size {len(val_ds)}")
         print(f"The test_ds size {len(test_ds)}")
 
+        checkpoint_callback = ModelCheckpoint(
+            save_top_k=1,
+            monitor="val_loss",
+            mode="min",
+            filename="best-model-{epoch:02d}-{val_loss:.2f}",
+        )
+
         early_stopping_callback = EarlyStopping(
             monitor="val_loss",
             patience=10,
@@ -95,11 +116,11 @@ def main(args):
             dirpath='your/save/directory/',
             filename='best-checkpoint',
             save_top_k=1,
-            mode='min'  # Minimize validation loss
+            mode='min'
         )
 
         trainer = pl.Trainer(
-            max_epochs=100, 
+            max_epochs=100, # Theo had 1
             callbacks=[early_stopping_callback, checkpoint_callback], 
             log_every_n_steps=5
         )
@@ -120,7 +141,7 @@ def main(args):
         print("Initialize model")
         model.apply(weight_init)
         trainer.fit(model, train_loader, val_loader)
-        output = trainer.predict(model, test_loader)
+        output = trainer.predict(model, test_loader, ckpt_path="best")
 
         predictions = []
         ground_truth = []
@@ -141,23 +162,24 @@ def main(args):
         acc.append(accuracy_score(ground_truth, predictions))
         auc.append(roc_auc_score(ground_truth, probas))
 
+        # Afficher les résultats agrégés
     print("---------------------------\n")
     print("Averaged results")
     print(
         "Average accuracy "
         + "{:.2%}".format(np.mean(np.array(acc)))
-        + f" ± {np.std(np.array(acc))}"
+        + "± {:.2%}".format(np.std(np.array(acc)))
     )
     print(
         "Average ROC AUC "
         + "{:.2%}".format(np.mean(np.array(auc)))
-        + f" ± {np.std(np.array(auc))}"
+        + "± {:.2%}".format(np.std(np.array(auc)))
     )
     print("---------------------------\n")
 
     return 0
 
-
+# Exécuter la fonction principale
 if __name__ == "__main__":
     logging.info("Create dataset")
     main(args)
