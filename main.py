@@ -109,7 +109,7 @@ def main(args):
 
         logging.info(f"Starting fold {fold+1}/{args.k_cv}")
 
-        train_ds = CheckedImageDataset(torch.tensor(X_fold_train), torch.tensor(y_fold_train), transform=get_transforms(augment=False))
+        train_ds = CheckedImageDataset(torch.tensor(X_fold_train), torch.tensor(y_fold_train), transform=get_transforms(augment=True))
         val_ds = CheckedImageDataset(torch.tensor(X_fold_val), torch.tensor(y_fold_val), transform=get_transforms(augment=False))
         test_ds = CheckedImageDataset(torch.tensor(X_fold_test), torch.tensor(y_fold_test), transform=get_transforms(augment=False))
 
