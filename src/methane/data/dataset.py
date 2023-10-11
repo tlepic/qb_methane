@@ -42,9 +42,7 @@ class CheckedImageDataset(Dataset):
         # If there's a transform, apply it
         if self.transform:
             image = self.transform(image)
-        print("Shape after loading:", image.shape)
         return image.clone().detach(), label.clone().detach()
-
 
 def reshape_transform(x):
     x = x.view(1, 1, 64, 64)

@@ -1,49 +1,74 @@
 import argparse
 import logging
 import os
-from PIL import Image
 import numpy as np
 import pandas as pd
-import pytorch_lightning as pl
 import torch
-
-from methane import ImageDataset, weight_init
-from methane.data import load_train
-from methane.models import (
-    Gasnet,
-    Gasnet2,
-    MethaneDetectionModel,
-    SimplifiedGasnet,
-    TestModel,
-)
-from methane.data.dataset import CheckedImageDataset
+import pytorch_lightning as pl
+from PIL import Image
 
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from sklearn.metrics import accuracy_score, classification_report, roc_auc_score
 from sklearn.model_selection import StratifiedKFold, train_test_split
-from torch.utils.data import DataLoader
 from torchvision import transforms
+from torch.utils.data import DataLoader
 
+from methane import ImageDataset, weight_init
+from methane.data import load_train
+from methane.models import Gasnet, Gasnet2, MethaneDetectionModel, SimplifiedGasnet, TestModel
+from methane.data.dataset import CheckedImageDataset
 
-
-# Étape 1 : Analyser les arguments de la ligne de commande
+# Analyser les arguments de la ligne de commande
 ap = argparse.ArgumentParser()
-
 ap.add_argument("--data_dir", type=str, default="data")
 ap.add_argument("--k_cv", type=int, default=5)
 ap.add_argument("--batch_size", type=int, default=12)
 ap.add_argument("--model", type=str, default="test")
 
-# Étape 2 : Configurer les journaux
+# Configurer les journaux
 logging.basicConfig(
-    level=logging.INFO,  # Set the logging level
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",  # Set the log message format
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 
-# Étape 3 : Initialisation de random seed
+# Initialisation de random seed
 args = ap.parse_args()
-torch.manual_seed(42)
+torch.manual_seed(17)
 
+# ======================
+# Augmentation Pipeline
+# ======================
+
+def ensure_grayscale_shape(img_tensor):
+    if len(img_tensor.shape) == 2:     
+        return img_tensor.unsqueeze(0)  
+
+def get_transforms(augment=True):
+    """
+    Returns the appropriate transforms that should be applied to the training set only.
+
+    Args:
+    - augment (bool): If True, returns augmentation pipeline, else returns basic transform.
+
+    Returns:
+    - torchvision.transforms.Compose: Transformation pipeline.
+    """
+    if augment:
+        return transforms.Compose([
+            transforms.Lambda(ensure_grayscale_shape),
+            transforms.RandomHorizontalFlip(),
+            transforms.RandomVerticalFlip(),
+            transforms.RandomRotation(degrees=30),
+        ])
+    else:
+        return transforms.Compose([
+            transforms.Lambda(ensure_grayscale_shape),
+        ])
+
+
+# ======================
+# Model Fitting & Training
+# ======================
 
 # Étape 4 : Définir la fonction principale
 def main(args):
@@ -84,15 +109,10 @@ def main(args):
 
         logging.info(f"Starting fold {fold+1}/{args.k_cv}")
 
-        # Dataset Preparation
-        basic_transform = transforms.Compose([
-            transforms.Lambda(ensure_grayscale_shape)
-        ])
+        train_ds = CheckedImageDataset(torch.tensor(X_fold_train), torch.tensor(y_fold_train), transform=get_transforms(augment=False))
+        val_ds = CheckedImageDataset(torch.tensor(X_fold_val), torch.tensor(y_fold_val), transform=get_transforms(augment=False))
+        test_ds = CheckedImageDataset(torch.tensor(X_fold_test), torch.tensor(y_fold_test), transform=get_transforms(augment=False))
 
-        train_ds = CheckedImageDataset(torch.tensor(X_fold_train), torch.tensor(y_fold_train), transform=augmentation_pipeline)
-        val_ds = CheckedImageDataset(torch.tensor(X_fold_val), torch.tensor(y_fold_val), transform=basic_transform)
-        test_ds = CheckedImageDataset(torch.tensor(X_fold_test), torch.tensor(y_fold_test), transform=basic_transform)
-        
         # DataLoader Initialization
         train_loader = DataLoader(train_ds, batch_size=args.batch_size, shuffle=True, num_workers=8)
         val_loader = DataLoader(val_ds, batch_size=args.batch_size, shuffle=False, num_workers=8)
@@ -102,32 +122,10 @@ def main(args):
         logging.info(f"The train_ds size {len(train_ds)}")
         logging.info(f"The val_ds size {len(val_ds)}")
         logging.info(f"The test_ds size {len(test_ds)}")
-
-
-        # Inspect some batches from the DataLoader
-        for i, (batch, _) in enumerate(train_loader):
-            logging.info(f"Batch {i} shape in train_loader: {batch.shape}")
-            if i > 5:  # Let's check just the first 5 batches for brevity
-                break
-
-        for i, (batch, _) in enumerate(val_loader):
-            logging.info(f"Batch {i} shape in val_loader: {batch.shape}")
-            if i > 5:
-                break
-
-        for i, (batch, _) in enumerate(test_loader):
-            logging.info(f"Batch {i} shape in test_loader: {batch.shape}")
-            if i > 5:
-                break
-
+        
         # ======================
         # Model Initialization and Training
         # ======================
-
-        early_stopping_callback = EarlyStopping(monitor="val_loss", patience=10, mode="min", verbose=True)
-        trainer = pl.Trainer(max_epochs=100,  # Theo had 1
-            callbacks=[early_stopping_callback, checkpoint_callback],
-            log_every_n_steps=5,)
 
         checkpoint_callback = ModelCheckpoint(
             save_top_k=1,
@@ -136,6 +134,20 @@ def main(args):
             filename="best-model-{epoch:02d}-{val_loss:.2f}",
         )
 
+        early_stopping_callback = EarlyStopping(
+            monitor="val_loss", patience=10, 
+            mode="min", 
+            verbose=True
+        )
+        
+        trainer = pl.Trainer(
+            max_epochs=100,
+            callbacks=[
+                early_stopping_callback, 
+                checkpoint_callback
+                ],
+            log_every_n_steps=5
+        )
 
         if args.model == "baseline":
             model = MethaneDetectionModel()
