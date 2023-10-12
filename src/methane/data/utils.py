@@ -81,7 +81,6 @@ def encode_positions(coord_x, coord_y, matrix_size=64):
         for j in range(matrix_size):
             matrix[i, j] = (-i, j)
 
-    # Adding (10, 10) to each element of the matrix
     for i in range(matrix_size):
         for j in range(matrix_size):
             matrix[i, j] = (matrix[i, j][0] + coord_x, matrix[i, j][1] - coord_y)
