@@ -77,7 +77,7 @@ def load_test(dir_name, extra_feature=False, return_path=False):
         axis=1,
     )
     df_test["result_path"] = df_test.apply(
-        lambda row: f"methane_mixing_ratio_{row['id_coord']}.tif",
+        lambda row: f"{row['date']}_methane_mixing_ratio_{row['id_coord']}.tif",
         axis=1,
     )
 
