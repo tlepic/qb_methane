@@ -4,46 +4,28 @@ import torch.nn as nn
 import torch.nn.functional as F
 import pytorch_lightning as pl
 
-
-class Gasnet(pl.LightningModule):
+class SimplifiedGasnet(pl.LightningModule):
     def __init__(self):
         super().__init__()
 
-        # Conv-Pool Structure 1
-        self.conv1 = nn.Conv2d(2, 4, kernel_size=3)
+        # Single Conv-Pool Structure
+        self.conv1 = nn.Conv2d(1, 4, kernel_size=3, padding=1)
         self.pool1 = nn.MaxPool2d(2)
-        self.dropout1 = nn.Dropout(0.5)
+        self.dropout1 = nn.Dropout(0.2)
         self.batchnorm1 = nn.BatchNorm2d(4)
 
-        # Conv-Pool Structure 2
-        self.conv2 = nn.Conv2d(4, 8, kernel_size=3)
-        self.pool2 = nn.MaxPool2d(2)
-        self.dropout2 = nn.Dropout(0.5)
-        self.batchnorm2 = nn.BatchNorm2d(8)
-
-        # Fully Connected Layers
-        self.fc1 = nn.Linear(8 * 14 * 14, 2400)
-        self.fc2 = nn.Linear(2400, 32)
-        self.fc3 = nn.Linear(32, 1)
+        # Single Fully Connected Layer
+        self.fc1 = nn.Linear(4 * 32 * 32, 1)
 
     def forward(self, x):
         x = self.conv1(x)
+        x = self.batchnorm1(x)
         x = F.relu(x)
         x = self.pool1(x)
         x = self.dropout1(x)
-        x = self.batchnorm1(x)
-
-        x = self.conv2(x)
-        x = F.relu(x)
-        x = self.pool2(x)
-        x = self.dropout2(x)
-        x = self.batchnorm2(x)
 
         x = x.view(x.size(0), -1)  # Flatten
-
-        x = F.relu(self.fc1(x))
-        x = self.fc2(x)
-        x = self.fc3(x)
+        x = self.fc1(x)
 
         return x
 
@@ -76,7 +58,8 @@ class Gasnet(pl.LightningModule):
         proba = F.sigmoid(out)
         y_hat = (proba > 0.5).int()
         return proba.view(-1), y_hat, y
-
+    
     def configure_optimizers(self):
-        optimizer = optim.Adam(self.parameters(), lr=0.001)
-        return optimizer
+        optimizer = optim.Adam(self.parameters(), lr=0.001, weight_decay=1e-5)
+        scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.9)
+        return [optimizer], [scheduler]
