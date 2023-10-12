@@ -26,6 +26,7 @@ ap.add_argument("--data_dir", type=str, default="data")
 ap.add_argument("--k_cv", type=int, default=5)
 ap.add_argument("--batch_size", type=int, default=12)
 ap.add_argument("--model", type=str, default="test")
+ap.add_argument("--extra", type=bool, default=False)
 
 # Étape 2 : Configurer les journaux
 logging.basicConfig(
@@ -35,7 +36,7 @@ logging.basicConfig(
 
 # Étape 3 : Initialisation de random seed
 args = ap.parse_args()
-torch.manual_seed(4)
+torch.manual_seed(20)
 
 
 # Étape 4 : Définir la fonction principale
@@ -52,18 +53,20 @@ def main(args):
 
     # Charger les données d'entraînement
     logging.info("Load train data")
-    X_train, y_train, X_extra_feature = load_train(args.data_dir, extra_feature=True)
+    X_train, y_train, X_extra_feature = load_train(
+        args.data_dir, extra_feature=args.extra
+    )
 
     # Créer le jeu de données et effectuer une validation croisée en k-fold
     logging.info("Creating dataset")
-    kfold = StratifiedKFold(args.k_cv, shuffle=True, random_state=42)
+    kfold = StratifiedKFold(args.k_cv, shuffle=True, random_state=20)
 
     X = np.arange(len(X_train))
     acc = []
     auc = []
     for fold, (train_idx, test_idx) in enumerate(kfold.split(X, y_train)):
         train_idx, val_idx = train_test_split(
-            train_idx, test_size=0.2, random_state=4, stratify=y_train[train_idx]
+            train_idx, test_size=0.2, random_state=20, stratify=y_train[train_idx]
         )
         print("---------------------------\n")
         print(f"Starting fold {fold+1}/{args.k_cv}")
@@ -78,22 +81,38 @@ def main(args):
         X_fold_extra_test = X_extra_feature[test_idx]
         y_fold_test = y_train[test_idx]
 
-        # Def datasets
+        if args.extra:
+            # Def datasets
+            train_ds = ImageDataset(
+                torch.tensor(X_fold_train),
+                torch.tensor(y_fold_train),
+                extra_feature=torch.tensor(X_fold_extra_train),
+            )
+
+            val_ds = ImageDataset(
+                torch.tensor(X_fold_val),
+                torch.tensor(y_fold_val),
+                extra_feature=torch.tensor(X_fold_extra_val),
+            )
+            test_ds = ImageDataset(
+                torch.tensor(X_fold_test),
+                torch.tensor(y_fold_test),
+                extra_feature=torch.tensor(X_fold_extra_test),
+            )
+
+        # Else don't extra features
         train_ds = ImageDataset(
             torch.tensor(X_fold_train),
             torch.tensor(y_fold_train),
-            extra_feature=torch.tensor(X_fold_extra_train),
         )
 
         val_ds = ImageDataset(
             torch.tensor(X_fold_val),
             torch.tensor(y_fold_val),
-            extra_feature=torch.tensor(X_fold_extra_val),
         )
         test_ds = ImageDataset(
             torch.tensor(X_fold_test),
             torch.tensor(y_fold_test),
-            extra_feature=torch.tensor(X_fold_extra_test),
         )
 
         train_loader = DataLoader(
@@ -129,8 +148,8 @@ def main(args):
 
         early_stopping_callback = EarlyStopping(
             monitor="val_loss",
-            patience=10,
-            mode="min",
+            patience=15,
+            mode="max",
             verbose=True,
         )
 
@@ -144,11 +163,7 @@ def main(args):
             model = MethaneDetectionModel()
         elif args.model == "gasnet":
             model = Gasnet()
-        elif args.model == "simple-gasnet":
-            model = SimplifiedGasnet()
-        elif args.model == "gasnet_2":
-            model = Gasnet2()
-        elif args.model == "test":
+        if args.model == "test":
             model = TestModel()
         else:
             print("Provide valid model name")
