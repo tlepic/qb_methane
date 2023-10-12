@@ -67,15 +67,7 @@ def main():
                                             type=["tiff"],
                                             accept_multiple_files=False)
 
-        col1, col2 = st.columns(2)    
-        # Add a reset button
-        if col2.button("Analyze a new image"):
-            st.session_state.sat_image = None
-            st.session_state.loc = None
-            st.session_state.coords = None
-            st.session_state.prediction = None
-
-        if col1.button('Upload image'):
+        if st.button('Upload image'):
             with st.spinner("Image analysis in progress..."):
                 # Create tmp folder to store images
                 if not os.path.exists("app/tmp"):
@@ -85,8 +77,7 @@ def main():
                 st.session_state.loc, st.session_state.coords = image_infos(uploaded_file.name)
 
                 # Get satellite image
-                if st.session_state.sat_image == None:
-                    st.session_state.sat_image = plot_satellite_image(st.session_state.loc[0],
+                st.session_state.sat_image = plot_satellite_image(st.session_state.loc[0],
                                                                         st.session_state.loc[1])
 
                 # Get prediction
@@ -115,9 +106,12 @@ def main():
                     st.success("# 👍 No methane plume detected")
 
                 # Display uploaded image
-                st.image("app/tmp/temp_img.png",
-                            caption=uploaded_file.name,
-                            use_column_width=True)
+                try:
+                    st.image("app/tmp/temp_img.png",
+                                caption=uploaded_file.name,
+                                use_column_width=True)
+                except:
+                    st.image("app/tmp/temp_img.png")
 
             # Display the image location
             if display == "🗺️ See image location":
