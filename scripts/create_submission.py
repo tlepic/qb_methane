@@ -11,14 +11,11 @@ from methane import ImageDataset, weight_init, seed_everything, normalize_input
 from methane.data import load_train, load_test
 from methane.models import (
     Gasnet,
-    Gasnet2,
     MethaneDetectionModel,
-    SimplifiedGasnet,
     TestModel,
 )
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
-from sklearn.metrics import accuracy_score, classification_report, roc_auc_score
-from sklearn.model_selection import StratifiedKFold, train_test_split
+from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader
 
 os.chdir("..")
@@ -72,6 +69,15 @@ args = ap.parse_args()
 
 # Étape 4 : Définir la fonction principale
 def main(args):
+    """
+    Runs the main pipeline for training and evaluating the methane detection model.
+
+    Args:
+        args (argparse.Namespace): Command-line arguments and configurations.
+
+    Returns:
+        int: Exit code indicating the success of the function (0 if successful).
+    """
     logging.info("Load train data")
     X, y, X_extra = load_train(args.data_dir, extra_feature=True)
     logging.info("Load test data")

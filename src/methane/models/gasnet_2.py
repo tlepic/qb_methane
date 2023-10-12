@@ -7,6 +7,12 @@ import pytorch_lightning as pl
 
 class Gasnet2(pl.LightningModule):
     def __init__(self, num_channel=1):
+        """
+        Initializes the MethaneDetectionModel.
+
+        Args:
+            num_channel (int, optional): Number of input channels. Default is 1.
+        """
         super().__init__()
 
         # Conv-Pool Structure 1
@@ -27,6 +33,15 @@ class Gasnet2(pl.LightningModule):
         self.fc3 = nn.Linear(64, 1)
 
     def forward(self, x):
+        """
+        Forward pass of the model.
+
+        Args:
+            x (torch.Tensor): Input tensor.
+
+        Returns:
+            torch.Tensor: Output tensor.
+        """
         # First Conv-Pool
         x = self.conv1(x)
         x = self.batchnorm1(x)
@@ -49,6 +64,16 @@ class Gasnet2(pl.LightningModule):
         return x
 
     def training_step(self, batch, batch_idx):
+        """
+        Training step of the model.
+
+        Args:
+            batch (tuple): Batch containing input features and targets.
+            batch_idx (int): Index of the current batch.
+
+        Returns:
+            torch.Tensor: Loss value.
+        """
         x, y = batch
         x = x.float()
         y = y.long()
@@ -60,6 +85,13 @@ class Gasnet2(pl.LightningModule):
         return loss
 
     def validation_step(self, batch, batch_idx):
+        """
+        Validation step of the model.
+
+        Args:
+            batch (tuple): Batch containing input features and targets.
+            batch_idx (int): Index of the current batch.
+        """
         x, y = batch
         x = x.float()
         y = y.long()
@@ -70,6 +102,16 @@ class Gasnet2(pl.LightningModule):
         self.log("val_loss", loss)
 
     def predict_step(self, batch, batch_idx):
+        """
+        Prediction step of the model.
+
+        Args:
+            batch (tuple): Batch containing input features and targets.
+            batch_idx (int): Index of the current batch.
+
+        Returns:
+            tuple: Tuple containing the predicted probabilities, predicted labels, and true labels.
+        """
         x, y = batch
         x = x.float()
         y = y.long()
@@ -79,6 +121,12 @@ class Gasnet2(pl.LightningModule):
         return proba.view(-1), y_hat, y
 
     def configure_optimizers(self):
+        """
+        Configures the optimizer and learning rate scheduler for the model.
+
+        Returns:
+            tuple: Tuple containing the optimizer and the learning rate scheduler.
+        """
         optimizer = optim.Adam(self.parameters(), lr=0.001, weight_decay=1e-5)
         scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.9)
         return [optimizer], [scheduler]

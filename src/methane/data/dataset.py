@@ -6,6 +6,15 @@ import torchvision.transforms as transforms
 
 class ImageDataset(Dataset):
     def __init__(self, features, targets, transform=True, extra_feature=None) -> None:
+        """
+        Custom dataset class for handling image data.
+
+        Args:
+            features (torch.Tensor): Tensor containing the image features.
+            targets (torch.Tensor): Tensor containing the corresponding targets.
+            transform (bool, optional): Flag indicating whether to apply transformations to the features. Default is True.
+            extra_feature (torch.Tensor, optional): Tensor containing additional features. Default is None.
+        """
         super().__init__()
         self.features = features
         self.targets = targets
@@ -13,6 +22,15 @@ class ImageDataset(Dataset):
         self.extra_feature = extra_feature
 
     def __getitem__(self, index) -> Any:
+        """
+        Retrieves an item from the dataset.
+
+        Args:
+            index (int): Index of the item to retrieve.
+
+        Returns:
+            list: A list containing the features and targets.
+        """
         targets = self.targets[index]
         features = self.features[index]
 
@@ -28,9 +46,24 @@ class ImageDataset(Dataset):
         return [features, targets]
 
     def __len__(self):
+        """
+        Returns the length of the dataset.
+
+        Returns:
+            int: Length of the dataset.
+        """
         return len(self.targets)
 
 
 def reshape_transform(x):
+    """
+    Reshapes the input tensor.
+
+    Args:
+        x (torch.Tensor): Input tensor to reshape.
+
+    Returns:
+        torch.Tensor: Reshaped tensor.
+    """
     x = x.view(1, x.shape[0], x.shape[1])  # Reshape to (1, H, W)
     return x

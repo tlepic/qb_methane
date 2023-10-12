@@ -68,6 +68,20 @@ def load_train(dir_name, extra_feature=False):
 
 
 def load_test(dir_name, extra_feature=False, return_path=False):
+    """
+    Loads the test data for methane detection.
+
+    Args:
+        dir_name (str): Directory name where the test data is located.
+        extra_feature (bool, optional): Flag indicating whether to include extra features. Default is False.
+        return_path (bool, optional): Flag indicating whether to return the file paths instead of file names. Default is False.
+
+    Returns:
+        tuple or numpy.ndarray: If return_path is True and extra_feature is True, returns a tuple containing X_test (features), y_test (targets), X_extra_feature (extra features), and file_list (file paths).
+        If return_path is True and extra_feature is False, returns a tuple containing X_test, y_test, and file_list.
+        If return_path is False and extra_feature is True, returns a tuple containing X_test, y_test, and X_extra_feature.
+        If return_path is False and extra_feature is False, returns a tuple containing X_test and y_test.
+    """
     data_dir = pathlib.Path(dir_name) / "test_data"
 
     df_test = pd.read_csv(data_dir / "metadata.csv")
@@ -122,6 +136,17 @@ def load_test(dir_name, extra_feature=False, return_path=False):
 
 
 def encode_positions(coord_x, coord_y, matrix_size=64):
+    """
+    Encodes the positions based on the given coordinates.
+
+    Args:
+        coord_x (float): X-coordinate.
+        coord_y (float): Y-coordinate.
+        matrix_size (int, optional): Size of the matrix. Default is 64.
+
+    Returns:
+        numpy.ndarray: Encoded positions matrix.
+    """
     matrix = np.empty((matrix_size, matrix_size), dtype=object)
 
     for i in range(matrix_size):

@@ -15,6 +15,14 @@ if 'prediction' not in st.session_state:
     st.session_state.prediction = None
 
 def main():
+    """
+    The main function that runs the Streamlit application.
+
+    This function is responsible for setting up the Streamlit application and defining the app's behavior.
+
+    Returns:
+        None
+    """
     # Set CSS
     with open("app/assets/theme.css") as f:
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
