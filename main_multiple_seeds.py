@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import pytorch_lightning as pl
 import torch
-from methane import ImageDataset, weight_init, seed_everything
+from methane import ImageDataset, seed_everything, weight_init
 from methane.data import load_train
 from methane.models import (
     Gasnet,
