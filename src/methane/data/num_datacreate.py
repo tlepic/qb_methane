@@ -5,8 +5,8 @@ from torch.utils.data import DataLoader
 from torchvision.transforms import transforms
 from sklearn.metrics import roc_auc_score
 from methane import Gasnet2
-from dataset import ImageDataset
-from utils import load_train
+from .dataset import ImageDataset
+from .utils import load_train
 
 
 class EnsembleAugmentation:
