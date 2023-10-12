@@ -5,6 +5,8 @@ import numpy as np
 import torch.nn as nn
 import torch.nn.init as init
 
+import torchvision.transforms as transforms
+
 
 def weight_init(m):
     """
@@ -84,3 +86,8 @@ def seed_everything(seed=42):
     random.seed(seed)
     torch.manual_seed(seed)
     np.random.seed(seed)
+
+
+def normalize_input(x, mean, std):
+    x = (x - mean) / std
+    return x
