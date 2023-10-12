@@ -1,10 +1,10 @@
-**QB Methane MRV Study**
+## **QB Methane MRV Study**
 
 Methane is a powerful greenhouse gas, with a global warming potential many times greater than carbon dioxide. Monitoring, Reporting, and Verification (MRV) of methane emissions is crucial in the context of climate change mitigation and environmental protection.
 
 In this project, we are aiming to leverage advanced deep learning techniques and satellite imagery to develop an efficient and accurate system for localizing methane leaks in the atmosphere.
 
-**Dataset Details**:
+## **Dataset Details**:
 
 The satellite imagery dataset is greyscale and consists of 64x64 pixel images, each associated with:
 
@@ -20,7 +20,7 @@ The dataset is divided into two folders:
 - `plume`: Contains images depicting methane plumes.
 - `no_plume`: Contains images without methane plumes.
 
-**Setting Up the Project**:
+## **Setting Up the Project**:
 
 ```bash
 # Create a virtual environment and activate it
@@ -37,18 +37,18 @@ pip install -e .
 python main.py
 ```
 
-**Linting & Formatting**:
+## **Linting & Formatting**:
 
 - Before pushing any changes, use the Black formatter to avoid linting conflicts.
 - Ensure your imports are organized using the isort extension.
 
-**Model Development**:
+## **Model Development**:
 
 For this project, the model will be implemented using Pytorch Lightning. A sample baseline has been provided for reference.
 
 Inspired by the research article "Gas Classification Using Deep Convolutional Neural Networks", we aim implement a Deep Convolutional Neural Network (DCNN) known as GasNet for classifying the satellite images. Additionally, we explor the capabilities of GasNet 2, which is known from the research "Machine Vision for Natural Gas Methane Emissions Detection Using an Infrared Camera".
 
-**Potential Impact & Use Cases**:
+## **Potential Impact & Use Cases**:
 
 The successful implementation of this model can revolutionize methane leak detection in various industries. Our application is build for the **Oil and Gas**: industry. Our model could impact:
 
@@ -56,7 +56,7 @@ The successful implementation of this model can revolutionize methane leak detec
 2. Agriculture: Identifying methane emissions from livestock and agricultural processes.
 3. Waste Management: Monitoring landfills and waste treatment facilities for methane emissions.
 
-**Launching the Application**:
+## **Launching the Application**:
 
 To visualize the model's outputs and get insights into its performance, launch the Streamlit app:
 
