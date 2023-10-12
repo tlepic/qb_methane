@@ -98,21 +98,21 @@ def main(args):
             )
             num_channel = 2
 
-        # Else don't extra features
-        num_channel = 1
-        train_ds = ImageDataset(
-            torch.tensor(X_fold_train),
-            torch.tensor(y_fold_train),
-        )
+        else:
+            train_ds = ImageDataset(
+                torch.tensor(X_fold_train),
+                torch.tensor(y_fold_train),
+            )
 
-        val_ds = ImageDataset(
-            torch.tensor(X_fold_val),
-            torch.tensor(y_fold_val),
-        )
-        test_ds = ImageDataset(
-            torch.tensor(X_fold_test),
-            torch.tensor(y_fold_test),
-        )
+            val_ds = ImageDataset(
+                torch.tensor(X_fold_val),
+                torch.tensor(y_fold_val),
+            )
+            test_ds = ImageDataset(
+                torch.tensor(X_fold_test),
+                torch.tensor(y_fold_test),
+            )
+            num_channel = 1
 
         train_loader = DataLoader(
             train_ds,
@@ -152,10 +152,16 @@ def main(args):
             verbose=True,
         )
 
+        if torch.cuda.is_available():
+            accelerator = "gpu"
+        else:
+            accelerator = "cpu"
+
         trainer = pl.Trainer(
             max_epochs=100,  # Theo had 1
             callbacks=[early_stopping_callback, checkpoint_callback],
             log_every_n_steps=5,
+            accelerator=accelerator,
         )
 
         if args.model == "baseline":
