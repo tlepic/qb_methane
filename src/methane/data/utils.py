@@ -54,7 +54,7 @@ def load_test(dir_name, return_path=False):
     file_list = [file for file in data_dir.iterdir() if file.is_file()]
 
     X_test = []
-    y_test = []
+    y_test = []  # Warning this is used only for compatibility
 
     for sample in tqdm(file_list):
         with tiff.TiffFile(sample) as tif:
