@@ -53,9 +53,7 @@ def main(args):
 
     # Charger les données d'entraînement
     logging.info("Load train data")
-    X_train, y_train, X_extra_feature = load_train(
-        args.data_dir, extra_feature=args.extra
-    )
+    X_train, y_train, X_extra_feature = load_train(args.data_dir, extra_feature=True)
 
     # Créer le jeu de données et effectuer une validation croisée en k-fold
     logging.info("Creating dataset")
@@ -102,6 +100,7 @@ def main(args):
             num_channel = 2
 
         # Else don't extra features
+        num_channel = 1
         train_ds = ImageDataset(
             torch.tensor(X_fold_train),
             torch.tensor(y_fold_train),
@@ -161,11 +160,11 @@ def main(args):
         )
 
         if args.model == "baseline":
-            model = MethaneDetectionModel(num_channel=2)
+            model = MethaneDetectionModel(num_channel)
         elif args.model == "gasnet":
-            model = Gasnet(num_channel=2)
+            model = Gasnet(num_channel)
         if args.model == "test":
-            model = TestModel(num_channel=2)
+            model = TestModel(num_channel)
         else:
             print("Provide valid model name")
             break
