@@ -8,6 +8,7 @@ pytorch_lightning
 tifffile
 scikit-learn
 streamlit
+streamlit-chat
 matplotlib
 basemap
 basemap-data-hires

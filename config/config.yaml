@@ -1,0 +1,28 @@
+# Fichier de configuration des hyperparamètres
+arguments:
+  k_cv: 5 #default value 5
+  batch_size: 12 #default value 12
+  model: "test"
+  
+train_test_split:
+  test_size: 0.2 #default 0.2
+  
+DataLoaders:
+  num_workers: 8 #default 8
+
+checkpoint_callback:
+  save_top_k: 1
+  monitor: "val_loss"
+  mode: "min"
+  filename: "best-model-{epoch:02d}-{val_loss:.2f}"
+
+early_stopping_callback:
+  monitor: "val_loss"
+  patience: 10
+  mode: "min"
+  verbose: True
+
+trainer:
+  max_epochs: 100
+  callbacks: [early_stopping_callback, checkpoint_callback]
+  log_every_n_steps: 5
