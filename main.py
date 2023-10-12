@@ -1,3 +1,4 @@
+import yaml
 import argparse
 import logging
 
@@ -19,13 +20,43 @@ from sklearn.metrics import accuracy_score, classification_report, roc_auc_score
 from sklearn.model_selection import StratifiedKFold, train_test_split
 from torch.utils.data import DataLoader
 
+
+#Getting the hyperparameters from config.yaml
+with open("config/config.yaml", "r") as config_file:
+    config = yaml.safe_load(config_file)
+
+arg_k_cv = config["arguments"]["k_cv"]
+arg_batch_size = config["arguments"]["batch_size"]
+arg_model = config["arguments"]["model"]
+
+split_test_size = config["train_test_split"]["test_size"]
+
+loaders_num_workers = config["DataLoaders"]["num_workers"]
+
+check_callback_save_top_k = config["checkpoint_callback"]["save_top_k"]
+check_callback_monitor = config["checkpoint_callback"]["monitor"]
+check_callback_mode = config["checkpoint_callback"]["mode"]
+check_callback_filename = config["checkpoint_callback"]["filename"]
+
+early_callback_monitor = config["early_stopping_callback"]["monitor"]
+early_callback_patience = config["early_stopping_callback"]["patience"]
+early_callback_mode = config["early_stopping_callback"]["mode"]
+early_callback_verbose = config["early_stopping_callback"]["verbose"]
+
+trainer_max_epochs = config["trainer"]["max_epochs"]
+trainer_callbacks = config["trainer"]["callbacks"]
+trainer_log_every_n_steps = config["trainer"]["log_every_n_steps"]
+
+
+
+
 # Étape 1 : Analyser les arguments de la ligne de commande
 ap = argparse.ArgumentParser()
 
 ap.add_argument("--data_dir", type=str, default="data")
-ap.add_argument("--k_cv", type=int, default=5)
-ap.add_argument("--batch_size", type=int, default=12)
-ap.add_argument("--model", type=str, default="test")
+ap.add_argument("--k_cv", type=int, default=arg_k_cv)
+ap.add_argument("--batch_size", type=int, default=arg_batch_size)
+ap.add_argument("--model", type=str, default=arg_model)
 ap.add_argument("--extra", type=bool, default=False)
 
 # Étape 2 : Configurer les journaux
@@ -118,20 +149,20 @@ def main(args):
             train_ds,
             batch_size=args.batch_size,
             shuffle=True,
-            num_workers=8,
+            num_workers=loaders_num_workers,
         )
         val_loader = DataLoader(
             val_ds,
             batch_size=args.batch_size,
             shuffle=False,
-            num_workers=8,
+            num_workers=loaders_num_workers,
         )
 
         test_loader = DataLoader(
             test_ds,
             batch_size=args.batch_size,
             shuffle=False,
-            num_workers=8,
+            num_workers=loaders_num_workers,
         )
 
         print(f"The train_ds size {len(train_ds)}")
@@ -139,17 +170,17 @@ def main(args):
         print(f"The test_ds size {len(test_ds)}")
 
         checkpoint_callback = ModelCheckpoint(
-            save_top_k=1,
-            monitor="val_loss",
-            mode="min",
-            filename="best-model-{epoch:02d}-{val_loss:.2f}",
+            save_top_k=check_callback_save_top_k,
+            monitor=check_callback_monitor,
+            mode=check_callback_mode,
+            filename=check_callback_filename,
         )
 
         early_stopping_callback = EarlyStopping(
-            monitor="val_loss",
-            patience=10,
-            mode="min",
-            verbose=True,
+            monitor=early_callback_monitor,
+            patience=early_callback_patience,
+            mode=early_callback_mode,
+            verbose=early_callback_verbose,
         )
 
         if torch.cuda.is_available():
