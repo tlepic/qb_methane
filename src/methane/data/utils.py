@@ -106,14 +106,14 @@ def load_test(dir_name, extra_feature=False, return_path=False):
         if extra_feature:
             return (
                 np.array(X_test),
-                np.array(X_extra_feature),
                 np.array(y_test),
+                np.array(X_extra_feature),
                 file_list,
             )
         return np.array(X_test), np.array(y_test), file_list
 
     if extra_feature:
-        return np.array(X_test), np.array(X_extra_feature), np.array(y_test)
+        return np.array(X_test), np.array(y_test), np.array(X_extra_feature)
     return np.array(X_test), np.array(y_test)
 
 

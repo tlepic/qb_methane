@@ -211,6 +211,7 @@ def main(args):
     print("Initialize model")
     model.apply(weight_init)
     trainer.fit(model, train_loader, val_loader)
+
     output = trainer.predict(model, test_loader, ckpt_path="best")
 
     predictions = []
@@ -226,7 +227,7 @@ def main(args):
     data = {"path": file_list, "label": probas}
     df = pd.DataFrame(data)
     # Specify the CSV file name
-    csv_filename = "test.csv"
+    csv_filename = args.name + ".csv"
 
     # Write the DataFrame to a CSV file
     df.to_csv(csv_filename, index=False)
@@ -237,6 +238,6 @@ def main(args):
 # Exécuter la fonction principale
 if __name__ == "__main__":
     logging.info("Starting treatments")
-    seed_everything(0)
+    seed_everything(30)
     main(args)
     logging.info("End of treatments")
