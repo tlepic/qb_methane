@@ -21,7 +21,7 @@ from sklearn.model_selection import StratifiedKFold, train_test_split
 from torch.utils.data import DataLoader
 
 
-#Getting the hyperparameters from config.yaml
+# Getting the hyperparameters from config.yaml
 with open("config/config.yaml", "r") as config_file:
     config = yaml.safe_load(config_file)
 
@@ -46,8 +46,6 @@ early_callback_verbose = config["early_stopping_callback"]["verbose"]
 trainer_max_epochs = config["trainer"]["max_epochs"]
 trainer_callbacks = config["trainer"]["callbacks"]
 trainer_log_every_n_steps = config["trainer"]["log_every_n_steps"]
-
-
 
 
 # Étape 1 : Analyser les arguments de la ligne de commande
@@ -108,6 +106,12 @@ def main(args):
         X_fold_test = X_train[test_idx]
         X_fold_extra_test = X_extra_feature[test_idx]
         y_fold_test = y_train[test_idx]
+
+        moy_X = np.mean(X_fold_train.flatten())
+        std_X = np.std(X_fold_train.flatten())
+
+        moy_extra = np.mean(X_fold_extra_train.flatten())
+        std_extra = np.std(X_fold_extra_train.flatten())
 
         if args.extra:
             # Def datasets
