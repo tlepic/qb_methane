@@ -37,6 +37,7 @@ def load_train(dir_name, extra_feature=False):
     X_extra_feature = []
 
     df_train = pd.read_csv(data_dir / "metadata.csv")
+    df_train = df_train.drop_duplicates(subset=["date", "id_coord"])
 
     for sample, plume, coord_x, coord_y in tqdm(
         df_train[["path", "plume", "coord_x", "coord_y"]].values
@@ -70,6 +71,7 @@ def load_test(dir_name, extra_feature=False, return_path=False):
     data_dir = pathlib.Path(dir_name) / "test_data"
 
     df_test = pd.read_csv(data_dir / "metadata.csv")
+    df_test = df_test.drop_duplicates(subset=["date", "id_coord"])
     df_test["path"] = df_test.apply(
         lambda row: f"{data_dir}/images/{row['date']}_methane_mixing_ratio_{row['id_coord']}.tif",
         axis=1,
@@ -78,6 +80,8 @@ def load_test(dir_name, extra_feature=False, return_path=False):
         lambda row: f"methane_mixing_ratio_{row['id_coord']}.tif",
         axis=1,
     )
+
+    file_list = os.listdir(data_dir / "images")
 
     X_test = []
     X_extra_feature = []
