@@ -10,3 +10,8 @@ tifffile==2023.7.10
 torch==2.1.0
 torchvision==0.16.0
 tqdm==4.66.1
+nbstripout
+ipykernel
+streamlit-chat
+basemap
+basemap-data-hires
