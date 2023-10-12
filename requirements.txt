@@ -113,6 +113,7 @@ yarl==1.9.2
 zipp @ file:///croot/zipp_1672387121353/work
 
 streamlit
+streamlit-chat
 matplotlib
 basemap
 basemap-data-hires

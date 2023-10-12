@@ -1,50 +1,18 @@
 import streamlit as st
+import os
 import pandas as pd
 import matplotlib.pyplot as plt
-from mpl_toolkits.basemap import Basemap
-# from ???.py import model
+from tools.utils import methane_predict, image_infos, plot_satellite_image
 
-### Useful functions ###
-
-# Get image informations
-def image_infos(image_name):
-    # Read the metadata.csv file
-    metadata_df = pd.read_csv("data/test data/metadata.csv")
-
-    # Get image id
-    image_id = image_name[-8:-4]
-
-    # Filter the metadata for the uploaded image
-    image_metadata = metadata_df[metadata_df["id_coord"].str.contains(image_id)]
-
-    # Extract the latitude and longitude values
-    latitude = image_metadata["lat"].values[0]
-    longitude = image_metadata["lon"].values[0]
-    location = [latitude, longitude]
-
-    # Extract plume coordinates on picture
-    coord_x = image_metadata["coord_x"].values[0]
-    coord_y = image_metadata["coord_y"].values[0]
-    coords = [coord_x, coord_y]
-
-    return location, coords
-
-# Get satellite view of location
-def plot_satellite_image(latitude, longitude):
-    fig = plt.figure(figsize=(10, 10))
-    m = Basemap(epsg=3857, projection='merc', llcrnrlat=latitude-0.01, urcrnrlat=latitude+0.01, llcrnrlon=longitude-0.01, urcrnrlon=longitude+0.01, resolution='h')
-    m.arcgisimage(service='World_Imagery', xpixels=700, verbose=False)
-    ### ADD LEGEND WITH COORDINATES ###
-    plt.savefig('app/satellite_image.png')  # Save the plotted image
-
-# Create session state elements
-if 'image' not in st.session_state:
-    st.session_state.image = None
+# Initialize session state elements
+if 'sat_image' not in st.session_state:
+    st.session_state.sat_image = None
 if 'loc' not in st.session_state:
     st.session_state.loc = None
 if 'coords' not in st.session_state:
     st.session_state.coords = None
-
+if 'prediction' not in st.session_state:
+    st.session_state.prediction = None
 
 def main():
     # Set CSS
@@ -69,80 +37,130 @@ def main():
         </style>
         """,
         unsafe_allow_html=True)
+
+        # Title of the app
         st.sidebar.markdown(
             """
         <div style="text-align: center;">
-            <h1 class="sidebar-title">Methane Plume Detector</h1>
+            <h1 class="sidebar-title">🌱 GREENOPS</h1>
             <p class="subtitle">An HEC-QB application</p>
         </div>
         """,
         unsafe_allow_html=True)
-        if st.button("Analyze a new image"):
-            st.session_state.image = None
-            st.session_state.loc = None
-            st.session_state.coords = None
+
+        # App features
+        feature = st.radio("Please select your use case", ["🏭 Methane plume detection",
+                                                            "🌍 Ecological impact evaluation",
+                                                            "🔧 Predictive maintenance",
+                                                            "📊 Energy efficiency analysis",
+                                                            "📋 Compliance monitoring",
+                                                            "🤖 Get advice from GreenBot"])
+
 
     # Methane Plume Detector
-    st.title("🔎 🏭 Detect a methane plume on an image")
-    uploaded_file = st.file_uploader("Please upload your image and click on 'Analyze image'",
-                                        type=["tiff"],
-                                        accept_multiple_files=False)
-        
-    if st.button('Analyze image'):
-        with st.spinner("Uploading satellite image"):
-            # Get image informations (location and coordinates)
-            st.session_state.loc, st.session_state.coords = image_infos(uploaded_file.name)
+    if feature == "🏭 Methane plume detection":
+        st.title("🔎 🏭 Methane Plume Detector")
+        uploaded_file = st.file_uploader("Please upload your image and click on 'Analyze image'",
+                                            type=["tiff"],
+                                            accept_multiple_files=False)
 
-            # Get satellite image
-            if st.session_state.image == None:
-                plot_satellite_image(st.session_state.loc[0], st.session_state.loc[1])
-                st.session_state.image = "app/satellite_image.png"
+        col1, col2 = st.columns(2)    
+        # Add a reset button
+        if col2.button("Analyze a new image"):
+            st.session_state.sat_image = None
+            st.session_state.loc = None
+            st.session_state.coords = None
+            st.session_state.prediction = None
 
-            ### INSERT MODEL ###
-            # output = model.predict(uploaded_file.name)
-            st.success("Image uploaded!")
+        if col1.button('Upload image'):
+            with st.spinner("Image analysis in progress..."):
+                # Create tmp folder to store images
+                if not os.path.exists("app/tmp"):
+                    os.makedirs("app/tmp")
 
-    if st.session_state.image != None:
-        display = st.radio("Select what you want to do", ["Display satellite view",
-                                                            "Search methane plume",
-                                                            "See plumes map"], horizontal=True)
-        
-        # Display the uploaded image
-        if display == "Display satellite view":
-            st.image(st.session_state.image, caption=uploaded_file.name, use_column_width=True)
+                # Get image informations (location and coordinates)
+                st.session_state.loc, st.session_state.coords = image_infos(uploaded_file.name)
 
-        # Display the result
-        if display == "Search methane plume":
-            ### INSERT MODEL RESULTS ###
-            # st.info(output)
-            st.info("Yes")
+                # Get satellite image
+                if st.session_state.sat_image == None:
+                    st.session_state.sat_image = plot_satellite_image(st.session_state.loc[0],
+                                                                        st.session_state.loc[1])
+
+                # Get prediction
+                st.session_state.prediction = methane_predict(uploaded_file.name,
+                                                                st.session_state.coords)
+
+        if st.session_state.sat_image != None:
+            display = st.radio("Select what you want to do", ["📊 See image analysis",
+                                                                "🗺️ See image location"])
             
-        # Display the map
-        if display == "See plumes map":
-            # Add color to dataset
-            df = pd.read_csv("data/train data/metadata.csv")
-            df['color'] = df['plume'].apply(lambda x: '#FF0000' if x == 'yes' else '#00FF00')
+            # Display the image analysis
+            if display == "📊 See image analysis":
+                # Display prediction
+                if round(st.session_state.prediction) == 1:
+                    st.error("# ⚠️ Methane plume detected!")
+                    # Add guidelines
+                    if st.checkbox("See guidelines"):
+                        st.info("Guidelines")
+                else:
+                    st.success("# 👍 No methane plume detected")
 
-            new_row = pd.DataFrame({
-                'date': [" "],
-                'id_coord': [" "],
-                'plume': [" "],
-                'set': [" "],
-                'lat': [st.session_state.loc[0]],
-                'lon': [st.session_state.loc[1]],
-                'coord_x': [st.session_state.coords[0]],
-                'coord_y': [st.session_state.coords[1]],
-                'path': [" "],
-                'color': ['#0000FF']
-            })
+                # Display uploaded image
+                st.image("app/tmp/temp_img.png",
+                            caption=uploaded_file.name,
+                            use_column_width=True)
 
-            df = pd.concat([df, new_row], ignore_index=True)
+            # Display the image location
+            if display == "🗺️ See image location":
+                # Add color to dataset
+                df = pd.read_csv("data/train_data/metadata.csv")
+                df['color'] = df['plume'].apply(lambda x: '#FF0000' if x == 'yes' else '#00FF00')
 
-            st.map(df, color='color', zoom=1)
-            st.info("##### Legend:" + "\n"
-            +"- :green[No methane plume]" + "\n"
-            + "- :red[Methane plume]" + "\n"
-            + "- :blue[Current plume under analysis]")
+                # Add new row with image info to dataset
+                new_row = pd.DataFrame({
+                    'date': [" "],
+                    'id_coord': [" "],
+                    'plume': [" "],
+                    'set': [" "],
+                    'lat': [st.session_state.loc[0]],
+                    'lon': [st.session_state.loc[1]],
+                    'coord_x': [st.session_state.coords[0]],
+                    'coord_y': [st.session_state.coords[1]],
+                    'path': [" "],
+                    'color': ['#0000FF']
+                })
+                df = pd.concat([df, new_row], ignore_index=True)
+
+                # Display map of plumes
+                st.info("#### Map of my plants" +"\n"
+                +"*Legend: :green[No methane plume], :red[Methane plume], :blue[Current plume under analysis]* ")
+                st.map(df, color='color', zoom=1)
+
+                # Display satellite image
+                st.info("#### Satellite view of analyzed plant")
+                st.image(st.session_state.sat_image,
+                            caption=f"Latitude: {st.session_state.loc[0]} - Longitude: {st.session_state.loc[1]}",
+                            use_column_width=True)
+    
+    # Unavailable features
+    if feature in ["🌍 Ecological impact evaluation",
+                    "🔧 Predictive maintenance",
+                    "📊 Energy efficiency analysis",
+                    "📋 Compliance monitoring"]:
+        st.error("# ⚙️ Feature in maintenance")
+
+    # GreenBot
+    if feature == "🤖 Get advice from GreenBot":
+        st.title("🤖 Chat with GreenBot")
+        input_container = st.container()
+        response_container = st.container()
+        with input_container:
+            user_input = st.text_input("Ask GreenBot for advice")
+        with response_container:
+            with st.chat_message("user"):
+                st.markdown("Hello")
+            with st.chat_message("assistant"):
+                st.markdown("Hello, I am GreenBot, your AI assistant, how can I help you?")
 
 
 if __name__ == "__main__":

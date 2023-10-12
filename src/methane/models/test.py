@@ -1,15 +1,17 @@
+import pytorch_lightning as pl
 import torch
-import torch.optim as optim
 import torch.nn as nn
 import torch.nn.functional as F
-import pytorch_lightning as pl
+import torch.optim as optim
+from torchmetrics.classification import BinaryAccuracy, BinaryAUROC
+
 
 class TestModel(pl.LightningModule):
-    def __init__(self):
+    def __init__(self, num_channel=1):
         super().__init__()
 
         # Conv-Pool Structure 1
-        self.conv1 = nn.Conv2d(1, 8, kernel_size=3, padding=1)
+        self.conv1 = nn.Conv2d(num_channel, 8, kernel_size=3, padding=1)
         self.pool1 = nn.MaxPool2d(2)
         self.dropout1 = nn.Dropout(0.3)
         self.batchnorm1 = nn.BatchNorm2d(8)
@@ -56,6 +58,12 @@ class TestModel(pl.LightningModule):
         criterion = torch.nn.BCEWithLogitsLoss()
         loss = criterion(y_hat, y.float())
         self.log("train_loss", loss)
+        acc = BinaryAccuracy()
+        auc = BinaryAUROC()
+        accuracy = acc(y_hat, y)
+        aucroc = auc(y_hat, y)
+        self.log("train_acc", accuracy, prog_bar=True)
+        self.log("train_roc_auc", aucroc, prog_bar=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -67,6 +75,12 @@ class TestModel(pl.LightningModule):
         criterion = torch.nn.BCEWithLogitsLoss()
         loss = criterion(y_hat, y.float())
         self.log("val_loss", loss)
+        acc = BinaryAccuracy()
+        auc = BinaryAUROC()
+        accuracy = acc(y_hat, y)
+        aucroc = auc(y_hat, y)
+        self.log("val_acc", accuracy, prog_bar=True)
+        self.log("val_roc_auc", aucroc, prog_bar=True)
 
     def predict_step(self, batch, batch_idx):
         x, y = batch

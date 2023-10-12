@@ -9,8 +9,8 @@ Project: localize methane leaks in the atmosphere.
 - Create a virtual environmnent and activate it
 
 ```bash
-$conda create --name qb_env python=3.8
-$conda activate qb_env
+conda create --name qb_env python=3.8
+conda activate qb_env
 ```
 
 - Install the necessary requirements and the project package
@@ -25,7 +25,7 @@ pip install -e .
 - Run a cross validation for the baseline
 
 ```bash
-$python main.py
+python main.py
 ```
 
 **Linting and formating**
@@ -60,3 +60,7 @@ Model should be implemented using pytorch lightning (see baseline for more detai
 ## Business Plan
 
 Identify use cases where this model can be used to drive positive impact. 
+**Launching the Streamlit app**
+```python
+streamlit run app/app.py
+```

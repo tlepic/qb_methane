@@ -4,12 +4,13 @@ import torch.nn as nn
 import torch.nn.functional as F
 import pytorch_lightning as pl
 
+
 class SimplifiedGasnet(pl.LightningModule):
-    def __init__(self):
+    def __init__(self, num_channel=1):
         super().__init__()
 
         # Single Conv-Pool Structure
-        self.conv1 = nn.Conv2d(1, 4, kernel_size=3, padding=1)
+        self.conv1 = nn.Conv2d(num_channel, 4, kernel_size=3, padding=1)
         self.pool1 = nn.MaxPool2d(2)
         self.dropout1 = nn.Dropout(0.2)
         self.batchnorm1 = nn.BatchNorm2d(4)
@@ -58,7 +59,7 @@ class SimplifiedGasnet(pl.LightningModule):
         proba = F.sigmoid(out)
         y_hat = (proba > 0.5).int()
         return proba.view(-1), y_hat, y
-    
+
     def configure_optimizers(self):
         optimizer = optim.Adam(self.parameters(), lr=0.001, weight_decay=1e-5)
         scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.9)
