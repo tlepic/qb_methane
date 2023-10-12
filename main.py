@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import pytorch_lightning as pl
 import torch
-from methane import ImageDataset, weight_init, seed_everything
+from methane import ImageDataset, weight_init, seed_everything, normalize_input
 from methane.data import load_train
 from methane.models import (
     Gasnet,
@@ -56,6 +56,7 @@ ap.add_argument("--k_cv", type=int, default=arg_k_cv)
 ap.add_argument("--batch_size", type=int, default=arg_batch_size)
 ap.add_argument("--model", type=str, default=arg_model)
 ap.add_argument("--extra", type=bool, default=False)
+ap.add_argument("-norm", type=str, default=False)
 
 # Étape 2 : Configurer les journaux
 logging.basicConfig(
@@ -112,6 +113,23 @@ def main(args):
 
         moy_extra = np.mean(X_fold_extra_train.flatten())
         std_extra = np.std(X_fold_extra_train.flatten())
+
+        if args.norm:
+            for X in X_fold_train:
+                X = normalize_input(X, moy_X, std_X)
+            for X in X_fold_val:
+                X = normalize_input(X, moy_X, std_X)
+            for X in X_fold_test:
+                X = normalize_input(X, moy_X, std_X)
+
+            for X in X_fold_extra_train:
+                X = normalize_input(X, moy_extra, std_extra)
+
+            for X in X_fold_extra_val:
+                X = normalize_input(X, moy_extra, std_extra)
+
+            for X in X_fold_extra_test:
+                X = normalize_input(X, moy_extra, std_extra)
 
         if args.extra:
             # Def datasets
