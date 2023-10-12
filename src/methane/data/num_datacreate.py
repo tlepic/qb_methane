@@ -5,40 +5,46 @@ from torch.utils.data import DataLoader
 from torchvision.transforms import transforms
 from sklearn.metrics import roc_auc_score
 from methane import Gasnet2
-from .dataset import ImageDataset
-from .utils import load_train
+from dataset import ImageDataset
+from utils import load_train, load_test
 
 
 class EnsembleAugmentation:
-    def __init__(self, base_path, metadata_csv_path, model_info):
+    def __init__(self, base_path, metadata_csv_path, model_info, train):
         self.base_path = base_path
         self.metadata_csv_path = metadata_csv_path
         self.model_info = model_info
+        self.train = train
 
     def load_metadata(self):
         df = pd.read_csv(self.metadata_csv_path)
-        df['plume'] = df['plume'].map({'yes': 1, 'no': 0})  
+        if self.train==True:
+            df['plume'] = df['plume'].map({'yes': 1, 'no': 0})  
         for i, _ in enumerate(self.model_info):
             df[f'model_{i+1}'] = 0.0
-        print(df.head())
         return df
 
     def create_dataloader_xtrafeat(self, df):
-        X_train, y_train, X_extra_feature = load_train(os.path.join(self.base_path, 'data'), extra_feature=True)
+        if self.train==True:
+            X, y, X_xtra = load_train(os.path.join(self.base_path, 'data'), extra_feature=True)
+        else:
+            X, y, X_xtra = load_test(os.path.join(self.base_path, 'data'), extra_feature=True)    
         transform_flag = True 
 
-        dataset = ImageDataset(X_train, y_train, transform=transform_flag, extra_feature=torch.tensor(X_extra_feature))
+        dataset = ImageDataset(X, y, transform=transform_flag, extra_feature=torch.tensor(X_xtra))
         dataloader = DataLoader(dataset, batch_size=1, shuffle=False, num_workers=8)
         return dataloader
 
     def create_dataloader(self, df):
-        X_train, y_train = load_train(os.path.join(self.base_path, 'data'), extra_feature=False)
+        if self.train==True:
+            X, y = load_train(os.path.join(self.base_path, 'data'))
+        else:
+            X, y = load_test(os.path.join(self.base_path, 'data'))
         transform_flag = True 
 
-        dataset = ImageDataset(X_train, y_train, transform=transform_flag)
+        dataset = ImageDataset(X, y, transform=transform_flag)
         dataloader = DataLoader(dataset, batch_size=1, shuffle=False, num_workers=8)
         return dataloader
-
 
     def load_model_from_checkpoint(path, model_type):
         """
@@ -103,7 +109,8 @@ class EnsembleAugmentation:
     def save_and_print_results(self, df_augmented):
         output_file = self.metadata_csv_path.replace('.csv', '_augmented.csv')
         df_augmented.to_csv(output_file, index=False)
-        print(EnsembleAugmentation.calculate_accuracy(df_augmented))
+        if self.train:
+            print(EnsembleAugmentation.calculate_accuracy(df_augmented))
     
     def data_loader_and_augmentation(self):
         df_augmented = None
@@ -126,7 +133,7 @@ if __name__ == "__main__":
         (absolute_path + 'lightning_logs/version_32/checkpoints/best-model-epoch=17-val_loss=0.33.ckpt', 'Gasnet1'), 
         (absolute_path + 'lightning_logs/version_32/checkpoints/best-model-epoch=17-val_loss=0.33.ckpt', 'Gasnet')
     ]
-    metadata_csv_path = absolute_path + 'data/train_data/metadata.csv'
+    metadata_csv_path = absolute_path + 'data/test_data/metadata.csv'
     
-    ensemble = EnsembleAugmentation(absolute_path, metadata_csv_path, model_info)
+    ensemble = EnsembleAugmentation(absolute_path, metadata_csv_path, model_info, train=False)
     ensemble.data_loader_and_augmentation()

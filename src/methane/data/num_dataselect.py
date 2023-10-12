@@ -9,7 +9,7 @@ from sklearn.metrics import f1_score, roc_auc_score
 class NumDataSelector():
 
     def __init__(self, df):
-        super().__init__()  # Ensure that the parent class constructor is called
+        super().__init__()
         self.df = df
         self.world = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
 
@@ -25,7 +25,7 @@ class NumDataSelector():
         self.df['country'] = self.df.apply(lambda row: self.get_country(row['lat'], row['lon']), axis=1)
 
         self.df['month'] = pd.to_datetime(self.df['date'], format='%Y%m%d').dt.month
-        self.df.drop(columns=['date'], inplace=True)
+        self.df.drop(columns=['date', 'model_1', 'model_2', 'model_3', 'vote'], inplace=True)
 
         self.df['coord_product'] = self.df['coord_x'] * self.df['coord_y']
 
@@ -40,13 +40,18 @@ class NumDataSelector():
             self.df = pd.get_dummies(self.df, columns=['continent'])
 
         # Ensure only numerical columns are included in X
-        X = self.df.select_dtypes(include=[float, int])
 
         if train:
             y = self.df['plume']
+        
+        X = self.df.drop(columns=['plume'])
+        X = X.select_dtypes(include=[float, int])
+        
+        if train:
             return X, y
         else:
             return X
+
 
 if __name__ == '__main__':
     absolute_path = '/home/octav/Documents/HEC/quantum_black/QB_methane'

@@ -1,3 +1,7 @@
+# Uses the entirety of the training set to train the model.
+# Augments and predicts the test file.
+# Predicts 
+
 import os
 import joblib
 import pandas as pd
@@ -44,7 +48,7 @@ oob_scores = []
 
 for fold, (train_idx, test_idx) in enumerate(kfold.split(X, y)):
     X_train, X_val, y_train, y_val = train_test_split(X.iloc[train_idx], y.iloc[train_idx], test_size=config["train_test_split"]["test_size"])
-    print(X_train.head())
+
     # Train Random Forest model
     logging.info(f"Training model for fold {fold + 1}...")
     model = RandomForestClassifier(**rf_params, oob_score=True)
