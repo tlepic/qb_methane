@@ -27,6 +27,7 @@ ap.add_argument("--k_cv", type=int, default=5)
 ap.add_argument("--batch_size", type=int, default=12)
 ap.add_argument("--model", type=str, default="test")
 ap.add_argument("--seeds", type=int, default=10)
+ap.add_argument("--extra", type=bool, default=False)
 
 # Étape 2 : Configurer les journaux
 logging.basicConfig(
@@ -51,9 +52,11 @@ def main(args):
     """
 
     # Charger les données d'entraînement
-    X_train, y_train = load_train(args.data_dir)
+    logging.info("Load train data")
+    X_train, y_train, X_extra_feature = load_train(args.data_dir, extra_feature=True)
 
     # Créer le jeu de données et effectuer une validation croisée en k-fold
+    logging.info("Creating dataset")
     kfold = StratifiedKFold(args.k_cv, shuffle=True)
 
     X = np.arange(len(X_train))
@@ -67,16 +70,50 @@ def main(args):
         print(f"Starting fold {fold+1}/{args.k_cv}")
         # set the training and validation folds
         X_fold_train = X_train[train_idx]
+        X_fold_extra_train = X_extra_feature[train_idx]
         y_fold_train = y_train[train_idx]
         X_fold_val = X_train[val_idx]
+        X_fold_extra_val = X_extra_feature[val_idx]
         y_fold_val = y_train[val_idx]
         X_fold_test = X_train[test_idx]
+        X_fold_extra_test = X_extra_feature[test_idx]
         y_fold_test = y_train[test_idx]
 
-        # Def datasets
-        train_ds = ImageDataset(torch.tensor(X_fold_train), torch.tensor(y_fold_train))
-        val_ds = ImageDataset(torch.tensor(X_fold_val), torch.tensor(y_fold_val))
-        test_ds = ImageDataset(torch.tensor(X_fold_test), torch.tensor(y_fold_test))
+        if args.extra:
+            # Def datasets
+            train_ds = ImageDataset(
+                torch.tensor(X_fold_train),
+                torch.tensor(y_fold_train),
+                extra_feature=torch.tensor(X_fold_extra_train),
+            )
+
+            val_ds = ImageDataset(
+                torch.tensor(X_fold_val),
+                torch.tensor(y_fold_val),
+                extra_feature=torch.tensor(X_fold_extra_val),
+            )
+            test_ds = ImageDataset(
+                torch.tensor(X_fold_test),
+                torch.tensor(y_fold_test),
+                extra_feature=torch.tensor(X_fold_extra_test),
+            )
+            num_channel = 2
+
+        # Else don't extra features
+        num_channel = 1
+        train_ds = ImageDataset(
+            torch.tensor(X_fold_train),
+            torch.tensor(y_fold_train),
+        )
+
+        val_ds = ImageDataset(
+            torch.tensor(X_fold_val),
+            torch.tensor(y_fold_val),
+        )
+        test_ds = ImageDataset(
+            torch.tensor(X_fold_test),
+            torch.tensor(y_fold_test),
+        )
 
         train_loader = DataLoader(
             train_ds,
@@ -119,19 +156,16 @@ def main(args):
         )
 
         if args.model == "baseline":
-            model = MethaneDetectionModel()
+            model = MethaneDetectionModel(num_channel)
         elif args.model == "gasnet":
-            model = Gasnet()
-        elif args.model == "simple-gasnet":
-            model = SimplifiedGasnet()
-        elif args.model == "gasnet_2":
-            model = Gasnet2()
-        elif args.model == "test":
-            model = TestModel()
+            model = Gasnet(num_channel)
+        if args.model == "test":
+            model = TestModel(num_channel)
         else:
             print("Provide valid model name")
             break
 
+        print("Initialize model")
         model.apply(weight_init)
         trainer.fit(model, train_loader, val_loader)
         output = trainer.predict(model, test_loader, ckpt_path="best")
@@ -150,7 +184,7 @@ def main(args):
         accuracy = accuracy_score(ground_truth, predictions)
 
         print("---------------------------\n")
-        print("ROC - AUC " + "{:.2%}".format(roc_auc))
+        print(f"ROC-AUC {roc_auc}")
         print("---------------------------\n")
 
         acc.append(accuracy)
@@ -162,12 +196,12 @@ def main(args):
     print(
         "Average accuracy "
         + "{:.2%}".format(np.mean(np.array(acc)))
-        + " ± {:.2%}".format(np.std(np.array(acc)))
+        + "± {:.2%}".format(np.std(np.array(acc)))
     )
     print(
         "Average ROC AUC "
         + "{:.2%}".format(np.mean(np.array(auc)))
-        + " ± {:.2%}".format(np.std(np.array(auc)))
+        + "± {:.2%}".format(np.std(np.array(auc)))
     )
     print("---------------------------\n")
 

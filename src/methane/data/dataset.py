@@ -1,14 +1,15 @@
 from typing import Any
-
+import torch
 from torch.utils.data import Dataset
 
 
 class ImageDataset(Dataset):
-    def __init__(self, features, targets, transform=True) -> None:
+    def __init__(self, features, targets, transform=True, extra_feature=None) -> None:
         super().__init__()
         self.features = features
         self.targets = targets
         self.transform = transform
+        self.extra_feature = extra_feature
 
     def __getitem__(self, index) -> Any:
         targets = self.targets[index]
@@ -16,6 +17,12 @@ class ImageDataset(Dataset):
 
         if self.transform:
             features = reshape_transform(features)
+
+        if self.extra_feature is not None:
+            if self.transform:
+                extra_feature = reshape_transform(self.extra_feature)
+            extra_feature = self.extra_feature[index]
+            return [torch.cat([features, extra_feature], dim=0), targets]
 
         return [features, targets]
 
