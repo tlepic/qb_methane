@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import pytorch_lightning as pl
 import torch
-from methane import ImageDataset, weight_init
+from methane import ImageDataset, weight_init, seed_everything
 from methane.data import load_train
 from methane.models import (
     Gasnet,
@@ -57,6 +57,7 @@ ap.add_argument("--data_dir", type=str, default="data")
 ap.add_argument("--k_cv", type=int, default=arg_k_cv)
 ap.add_argument("--batch_size", type=int, default=arg_batch_size)
 ap.add_argument("--model", type=str, default=arg_model)
+ap.add_argument("--extra", type=bool, default=False)
 
 # Étape 2 : Configurer les journaux
 logging.basicConfig(
@@ -66,7 +67,6 @@ logging.basicConfig(
 
 # Étape 3 : Initialisation de random seed
 args = ap.parse_args()
-torch.manual_seed(42)
 
 
 # Étape 4 : Définir la fonction principale
@@ -83,33 +83,67 @@ def main(args):
 
     # Charger les données d'entraînement
     logging.info("Load train data")
-    X_train, y_train = load_train(args.data_dir)
+    X_train, y_train, X_extra_feature = load_train(args.data_dir, extra_feature=True)
 
     # Créer le jeu de données et effectuer une validation croisée en k-fold
     logging.info("Creating dataset")
-    kfold = StratifiedKFold(args.k_cv, shuffle=True, random_state=42)
+    kfold = StratifiedKFold(args.k_cv, shuffle=True)
 
     X = np.arange(len(X_train))
     acc = []
     auc = []
     for fold, (train_idx, test_idx) in enumerate(kfold.split(X, y_train)):
         train_idx, val_idx = train_test_split(
-            train_idx, test_size=split_test_size, random_state=42, stratify=y_train[train_idx]
+            train_idx, test_size=0.2, stratify=y_train[train_idx]
         )
         print("---------------------------\n")
         print(f"Starting fold {fold+1}/{args.k_cv}")
         # set the training and validation folds
         X_fold_train = X_train[train_idx]
+        X_fold_extra_train = X_extra_feature[train_idx]
         y_fold_train = y_train[train_idx]
         X_fold_val = X_train[val_idx]
+        X_fold_extra_val = X_extra_feature[val_idx]
         y_fold_val = y_train[val_idx]
         X_fold_test = X_train[test_idx]
+        X_fold_extra_test = X_extra_feature[test_idx]
         y_fold_test = y_train[test_idx]
 
-        # Def datasets
-        train_ds = ImageDataset(torch.tensor(X_fold_train), torch.tensor(y_fold_train))
-        val_ds = ImageDataset(torch.tensor(X_fold_val), torch.tensor(y_fold_val))
-        test_ds = ImageDataset(torch.tensor(X_fold_test), torch.tensor(y_fold_test))
+        if args.extra:
+            # Def datasets
+            train_ds = ImageDataset(
+                torch.tensor(X_fold_train),
+                torch.tensor(y_fold_train),
+                extra_feature=torch.tensor(X_fold_extra_train),
+            )
+
+            val_ds = ImageDataset(
+                torch.tensor(X_fold_val),
+                torch.tensor(y_fold_val),
+                extra_feature=torch.tensor(X_fold_extra_val),
+            )
+            test_ds = ImageDataset(
+                torch.tensor(X_fold_test),
+                torch.tensor(y_fold_test),
+                extra_feature=torch.tensor(X_fold_extra_test),
+            )
+            num_channel = 2
+
+        else:
+            train_ds = ImageDataset(
+                torch.tensor(X_fold_train),
+                torch.tensor(y_fold_train),
+            )
+
+            val_ds = ImageDataset(
+                torch.tensor(X_fold_val),
+                torch.tensor(y_fold_val),
+            )
+            test_ds = ImageDataset(
+                torch.tensor(X_fold_test),
+                torch.tensor(y_fold_test),
+            )
+            num_channel = 1
 
         train_loader = DataLoader(
             train_ds,
@@ -149,22 +183,24 @@ def main(args):
             verbose=early_callback_verbose,
         )
 
+        if torch.cuda.is_available():
+            accelerator = "gpu"
+        else:
+            accelerator = "cpu"
+
         trainer = pl.Trainer(
-            max_epochs=trainer_max_epochs,  # Theo had 1
-            callbacks=trainer_callbacks,
-            log_every_n_steps=trainer_log_every_n_steps,
+            max_epochs=100,  # Theo had 1
+            callbacks=[early_stopping_callback, checkpoint_callback],
+            log_every_n_steps=5,
+            accelerator=accelerator,
         )
 
         if args.model == "baseline":
-            model = MethaneDetectionModel()
+            model = MethaneDetectionModel(num_channel)
         elif args.model == "gasnet":
-            model = Gasnet()
-        elif args.model == "simple-gasnet":
-            model = SimplifiedGasnet()
-        elif args.model == "gasnet_2":
-            model = Gasnet2()
-        elif args.model == "test":
-            model = TestModel()
+            model = Gasnet(num_channel)
+        if args.model == "test":
+            model = TestModel(num_channel)
         else:
             print("Provide valid model name")
             break
@@ -184,14 +220,17 @@ def main(args):
             ground_truth.extend(y.cpu().numpy())
             probas.extend(proba.cpu().numpy())
 
+        roc_auc = roc_auc_score(ground_truth, probas)
+        accuracy = accuracy_score(ground_truth, predictions)
+
         print("---------------------------\n")
         print("Classification report")
         print(classification_report(ground_truth, predictions))
-        print(f"ROC-AUC {roc_auc_score(ground_truth, probas)}")
+        print(f"ROC-AUC {roc_auc}")
         print("---------------------------\n")
 
-        acc.append(accuracy_score(ground_truth, predictions))
-        auc.append(roc_auc_score(ground_truth, probas))
+        acc.append(accuracy)
+        auc.append(roc_auc)
 
         # Afficher les résultats agrégés
     print("---------------------------\n")
@@ -208,10 +247,11 @@ def main(args):
     )
     print("---------------------------\n")
 
-    return 0
+    return acc, auc
 
 
 # Exécuter la fonction principale
 if __name__ == "__main__":
     logging.info("Create dataset")
-    main(args)
+    seed_everything(42)
+    acc, auc = main(args)

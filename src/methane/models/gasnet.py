@@ -6,11 +6,11 @@ import pytorch_lightning as pl
 
 
 class Gasnet(pl.LightningModule):
-    def __init__(self):
+    def __init__(self, num_channel=1):
         super().__init__()
 
         # Conv-Pool Structure 1
-        self.conv1 = nn.Conv2d(1, 4, kernel_size=3)
+        self.conv1 = nn.Conv2d(num_channel, 4, kernel_size=3)
         self.pool1 = nn.MaxPool2d(2)
         self.dropout1 = nn.Dropout(0.5)
         self.batchnorm1 = nn.BatchNorm2d(4)
