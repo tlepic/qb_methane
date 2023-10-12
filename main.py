@@ -99,6 +99,7 @@ def main(args):
                 torch.tensor(y_fold_test),
                 extra_feature=torch.tensor(X_fold_extra_test),
             )
+            num_channel = 2
 
         # Else don't extra features
         train_ds = ImageDataset(
@@ -148,7 +149,7 @@ def main(args):
 
         early_stopping_callback = EarlyStopping(
             monitor="val_loss",
-            patience=15,
+            patience=10,
             mode="min",
             verbose=True,
         )
@@ -160,11 +161,11 @@ def main(args):
         )
 
         if args.model == "baseline":
-            model = MethaneDetectionModel()
+            model = MethaneDetectionModel(num_channel=2)
         elif args.model == "gasnet":
-            model = Gasnet()
+            model = Gasnet(num_channel=2)
         if args.model == "test":
-            model = TestModel()
+            model = TestModel(num_channel=2)
         else:
             print("Provide valid model name")
             break
