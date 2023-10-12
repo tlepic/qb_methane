@@ -27,7 +27,7 @@ def load_train(dir_name, extra_feature=False):
         with tiff.TiffFile(str(sample_path) + ".tif") as tif:
             _feature = tif.asarray().astype(np.float64)
 
-        _extra_feature = encode_positions(coord_x, coord_y)
+        _extra_feature = np.multiply(encode_positions(coord_x, coord_y), _feature)
         if extra_feature:
             X_extra_feature.append(_extra_feature)
         X_train.append(_feature)
@@ -91,5 +91,5 @@ def encode_positions(coord_x, coord_y, matrix_size=64):
             matrix[i, j] = np.sqrt(matrix[i, j][0] ** 2 + matrix[i, j][1] ** 2)
 
     r = np.max(matrix.any())
-    matrix = matrix
+    matrix = matrix / r
     return np.array(matrix.astype(np.float64))
