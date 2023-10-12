@@ -19,9 +19,9 @@ class ImageDataset(Dataset):
             features = reshape_transform(features)
 
         if self.extra_feature is not None:
-            if self.transform:
-                extra_feature = reshape_transform(self.extra_feature)
             extra_feature = self.extra_feature[index]
+            if self.transform:
+                extra_feature = reshape_transform(extra_feature)
             return [torch.cat([features, extra_feature], dim=0), targets]
 
         return [features, targets]
@@ -31,5 +31,5 @@ class ImageDataset(Dataset):
 
 
 def reshape_transform(x):
-    x = x.view(1, x.shape[0], x.shape[1])  # Reshape to (1, 1, H, W)
+    x = x.view(1, x.shape[0], x.shape[1])  # Reshape to (1, H, W)
     return x
