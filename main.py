@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import pytorch_lightning as pl
 import torch
-from methane import ImageDataset, weight_init
+from methane import ImageDataset, weight_init, seed_everything
 from methane.data import load_train
 from methane.models import (
     Gasnet,
@@ -36,7 +36,6 @@ logging.basicConfig(
 
 # Étape 3 : Initialisation de random seed
 args = ap.parse_args()
-torch.manual_seed(20)
 
 
 # Étape 4 : Définir la fonction principale
@@ -57,14 +56,14 @@ def main(args):
 
     # Créer le jeu de données et effectuer une validation croisée en k-fold
     logging.info("Creating dataset")
-    kfold = StratifiedKFold(args.k_cv, shuffle=True, random_state=20)
+    kfold = StratifiedKFold(args.k_cv, shuffle=True)
 
     X = np.arange(len(X_train))
     acc = []
     auc = []
     for fold, (train_idx, test_idx) in enumerate(kfold.split(X, y_train)):
         train_idx, val_idx = train_test_split(
-            train_idx, test_size=0.2, random_state=20, stratify=y_train[train_idx]
+            train_idx, test_size=0.2, stratify=y_train[train_idx]
         )
         print("---------------------------\n")
         print(f"Starting fold {fold+1}/{args.k_cv}")
@@ -184,14 +183,17 @@ def main(args):
             ground_truth.extend(y.cpu().numpy())
             probas.extend(proba.cpu().numpy())
 
+        roc_auc = roc_auc_score(ground_truth, probas)
+        accuracy = accuracy_score(ground_truth, predictions)
+
         print("---------------------------\n")
         print("Classification report")
         print(classification_report(ground_truth, predictions))
-        print(f"ROC-AUC {roc_auc_score(ground_truth, probas)}")
+        print(f"ROC-AUC {roc_auc}")
         print("---------------------------\n")
 
-        acc.append(accuracy_score(ground_truth, predictions))
-        auc.append(roc_auc_score(ground_truth, probas))
+        acc.append(accuracy)
+        auc.append(roc_auc)
 
         # Afficher les résultats agrégés
     print("---------------------------\n")
@@ -208,10 +210,11 @@ def main(args):
     )
     print("---------------------------\n")
 
-    return 0
+    return acc, auc
 
 
 # Exécuter la fonction principale
 if __name__ == "__main__":
     logging.info("Create dataset")
-    main(args)
+    seed_everything(42)
+    acc, auc = main(args)
