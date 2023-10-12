@@ -20,16 +20,26 @@ class EnsembleAugmentation:
         df['plume'] = df['plume'].map({'yes': 1, 'no': 0})  
         for i, _ in enumerate(self.model_info):
             df[f'model_{i+1}'] = 0.0
+        print(df.head())
         return df
 
-    def create_dataloader(self, df):
-        X_train, y_train = load_train(os.path.join(self.base_path, 'data'))
+    def create_dataloader_xtrafeat(self, df):
+        X_train, y_train, X_extra_feature = load_train(os.path.join(self.base_path, 'data'), extra_feature=True)
         transform_flag = True 
-        dataset = ImageDataset(X_train, y_train, transform=transform_flag, extra_feature=True)
+
+        dataset = ImageDataset(X_train, y_train, transform=transform_flag, extra_feature=torch.tensor(X_extra_feature))
         dataloader = DataLoader(dataset, batch_size=1, shuffle=False, num_workers=8)
         return dataloader
 
-    @staticmethod
+    def create_dataloader(self, df):
+        X_train, y_train = load_train(os.path.join(self.base_path, 'data'), extra_feature=False)
+        transform_flag = True 
+
+        dataset = ImageDataset(X_train, y_train, transform=transform_flag)
+        dataloader = DataLoader(dataset, batch_size=1, shuffle=False, num_workers=8)
+        return dataloader
+
+
     def load_model_from_checkpoint(path, model_type):
         """
         Load model from checkpoint based on the given model type.
@@ -43,9 +53,9 @@ class EnsembleAugmentation:
         else:
             raise ValueError(f"Unsupported model type: {model_type}")
 
-        model.load_from_checkpoint(path)
-        model.eval()
-        return model.to(torch.double)
+        model = model.load_from_checkpoint(path)
+        model = model.eval().double().to(torch.device("cuda" if torch.cuda.is_available() else "cpu"))
+        return model
 
     @staticmethod
     def apply_models_to_data(models, dataloader):
@@ -55,12 +65,12 @@ class EnsembleAugmentation:
         """
         df_output = pd.DataFrame()
         for idx, (images, _) in enumerate(dataloader):
+            images = images.double()
             for i, model in enumerate(models):
                 with torch.no_grad():
                     output = model(images)
                     probability = torch.sigmoid(output).item()
                     df_output.at[idx, f'model_{i+1}'] = probability
-        print('THIS')
         print(df_output.head())
         return df_output
 
@@ -96,6 +106,7 @@ class EnsembleAugmentation:
         print(EnsembleAugmentation.calculate_accuracy(df_augmented))
     
     def data_loader_and_augmentation(self):
+        df_augmented = None
         print("Starting data augmentation...")
         try:
             df = self.load_metadata()
@@ -111,9 +122,9 @@ class EnsembleAugmentation:
 if __name__ == "__main__":
     absolute_path = '/home/octav/Documents/HEC/quantum_black/QB_methane/'
     model_info = [
-        (absolute_path + 'lightning_logs/version_26/checkpoints/best-model-epoch=05-val_loss=0.39.ckpt', 'Gasnet2'), 
-        (absolute_path + 'lightning_logs/version_26/checkpoints/best-model-epoch=05-val_loss=0.39.ckpt', 'Gasnet1'), 
-        (absolute_path + 'lightning_logs/version_26/checkpoints/best-model-epoch=05-val_loss=0.39.ckpt', 'Gasnet')
+        (absolute_path + 'lightning_logs/version_32/checkpoints/best-model-epoch=17-val_loss=0.33.ckpt', 'Gasnet2'), 
+        (absolute_path + 'lightning_logs/version_32/checkpoints/best-model-epoch=17-val_loss=0.33.ckpt', 'Gasnet1'), 
+        (absolute_path + 'lightning_logs/version_32/checkpoints/best-model-epoch=17-val_loss=0.33.ckpt', 'Gasnet')
     ]
     metadata_csv_path = absolute_path + 'data/train_data/metadata.csv'
     

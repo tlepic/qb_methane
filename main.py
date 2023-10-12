@@ -189,7 +189,7 @@ def main(args):
             accelerator = "cpu"
 
         trainer = pl.Trainer(
-            max_epochs=100,  # Theo had 1
+            max_epochs=100,
             callbacks=[early_stopping_callback, checkpoint_callback],
             log_every_n_steps=5,
             accelerator=accelerator,

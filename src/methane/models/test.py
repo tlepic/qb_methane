@@ -7,7 +7,7 @@ from torchmetrics.classification import BinaryAccuracy, BinaryAUROC
 
 
 class TestModel(pl.LightningModule):
-    def __init__(self, num_channel=1):
+    def __init__(self, num_channel=2):
         super().__init__()
 
         # Conv-Pool Structure 1
