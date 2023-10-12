@@ -48,6 +48,9 @@ def main():
         """,
         unsafe_allow_html=True)
 
+        # Add application logo
+        st.image("app/assets/greenops.png")
+        
         # App features
         feature = st.radio("Please select your use case", ["🏭 Methane plume detection",
                                                             "🌍 Ecological impact evaluation",
@@ -59,7 +62,7 @@ def main():
 
     # Methane Plume Detector
     if feature == "🏭 Methane plume detection":
-        st.title("🔎 🏭 Methane Plume Detector")
+        st.title("🔎 🏭 :green[Methane Plume Detector]")
         uploaded_file = st.file_uploader("Please upload your image and click on 'Analyze image'",
                                             type=["tiff"],
                                             accept_multiple_files=False)
@@ -101,7 +104,13 @@ def main():
                     st.error("# ⚠️ Methane plume detected!")
                     # Add guidelines
                     if st.checkbox("See guidelines"):
-                        st.info("Guidelines")
+                        st.info("##### Guidelines" + "\n"
+                                + "1. :red[Immediate action]" + "\n"
+                                + "2. [Safety measures](https://www.google.com)" + "\n"
+                                + "3. Isolate the source" + "\n"
+                                + "4. [Inform relevant authorities](https://urlz.fr/nZPK)" + "\n"
+                                + "5. Investigate the root cause" + "\n"
+                                + "6. Mitigation measures" + "\n")
                 else:
                     st.success("# 👍 No methane plume detected")
 
@@ -151,7 +160,7 @@ def main():
 
     # GreenBot
     if feature == "🤖 Get advice from GreenBot":
-        st.title("🤖 Chat with GreenBot")
+        st.title("🤖 :green[Chat with GreenBot]")
         input_container = st.container()
         response_container = st.container()
         with input_container:
