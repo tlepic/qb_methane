@@ -1,6 +1,7 @@
 import yaml
 import argparse
 import logging
+import os
 
 import numpy as np
 import pandas as pd
@@ -20,9 +21,9 @@ from sklearn.metrics import accuracy_score, classification_report, roc_auc_score
 from sklearn.model_selection import StratifiedKFold, train_test_split
 from torch.utils.data import DataLoader
 
-
+os.chdir("..")
 # Getting the hyperparameters from config.yaml
-with open("config/config.yaml", "r") as config_file:
+with open("./config/config.yaml", "r") as config_file:
     config = yaml.safe_load(config_file)
 
 arg_k_cv = config["arguments"]["k_cv"]

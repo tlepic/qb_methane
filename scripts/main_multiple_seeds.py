@@ -1,4 +1,3 @@
-import yaml
 import argparse
 import logging
 
@@ -6,7 +5,7 @@ import numpy as np
 import pandas as pd
 import pytorch_lightning as pl
 import torch
-from methane import ImageDataset, weight_init, seed_everything, normalize_input
+from methane import ImageDataset, seed_everything, weight_init
 from methane.data import load_train
 from methane.models import (
     Gasnet,
@@ -20,43 +19,16 @@ from sklearn.metrics import accuracy_score, classification_report, roc_auc_score
 from sklearn.model_selection import StratifiedKFold, train_test_split
 from torch.utils.data import DataLoader
 
-
-# Getting the hyperparameters from config.yaml
-with open("config/config.yaml", "r") as config_file:
-    config = yaml.safe_load(config_file)
-
-arg_k_cv = config["arguments"]["k_cv"]
-arg_batch_size = config["arguments"]["batch_size"]
-arg_model = config["arguments"]["model"]
-
-split_test_size = config["train_test_split"]["test_size"]
-
-loaders_num_workers = config["DataLoaders"]["num_workers"]
-
-check_callback_save_top_k = config["checkpoint_callback"]["save_top_k"]
-check_callback_monitor = config["checkpoint_callback"]["monitor"]
-check_callback_mode = config["checkpoint_callback"]["mode"]
-check_callback_filename = config["checkpoint_callback"]["filename"]
-
-early_callback_monitor = config["early_stopping_callback"]["monitor"]
-early_callback_patience = config["early_stopping_callback"]["patience"]
-early_callback_mode = config["early_stopping_callback"]["mode"]
-early_callback_verbose = config["early_stopping_callback"]["verbose"]
-
-trainer_max_epochs = config["trainer"]["max_epochs"]
-trainer_callbacks = config["trainer"]["callbacks"]
-trainer_log_every_n_steps = config["trainer"]["log_every_n_steps"]
-
-
+os.chdir("..")
 # Étape 1 : Analyser les arguments de la ligne de commande
 ap = argparse.ArgumentParser()
 
 ap.add_argument("--data_dir", type=str, default="data")
-ap.add_argument("--k_cv", type=int, default=arg_k_cv)
-ap.add_argument("--batch_size", type=int, default=arg_batch_size)
-ap.add_argument("--model", type=str, default=arg_model)
+ap.add_argument("--k_cv", type=int, default=5)
+ap.add_argument("--batch_size", type=int, default=12)
+ap.add_argument("--model", type=str, default="test")
+ap.add_argument("--seeds", type=int, default=10)
 ap.add_argument("--extra", type=bool, default=False)
-ap.add_argument("-norm", type=str, default=False)
 
 # Étape 2 : Configurer les journaux
 logging.basicConfig(
@@ -108,29 +80,6 @@ def main(args):
         X_fold_extra_test = X_extra_feature[test_idx]
         y_fold_test = y_train[test_idx]
 
-        moy_X = np.mean(X_fold_train.flatten())
-        std_X = np.std(X_fold_train.flatten())
-
-        moy_extra = np.mean(X_fold_extra_train.flatten())
-        std_extra = np.std(X_fold_extra_train.flatten())
-
-        if args.norm:
-            for X in X_fold_train:
-                X = normalize_input(X, moy_X, std_X)
-            for X in X_fold_val:
-                X = normalize_input(X, moy_X, std_X)
-            for X in X_fold_test:
-                X = normalize_input(X, moy_X, std_X)
-
-            for X in X_fold_extra_train:
-                X = normalize_input(X, moy_extra, std_extra)
-
-            for X in X_fold_extra_val:
-                X = normalize_input(X, moy_extra, std_extra)
-
-            for X in X_fold_extra_test:
-                X = normalize_input(X, moy_extra, std_extra)
-
         if args.extra:
             # Def datasets
             train_ds = ImageDataset(
@@ -152,6 +101,7 @@ def main(args):
             num_channel = 2
 
         else:
+            num_channel = 1
             train_ds = ImageDataset(
                 torch.tensor(X_fold_train),
                 torch.tensor(y_fold_train),
@@ -165,44 +115,39 @@ def main(args):
                 torch.tensor(X_fold_test),
                 torch.tensor(y_fold_test),
             )
-            num_channel = 1
 
         train_loader = DataLoader(
             train_ds,
             batch_size=args.batch_size,
             shuffle=True,
-            num_workers=loaders_num_workers,
+            num_workers=8,
         )
         val_loader = DataLoader(
             val_ds,
             batch_size=args.batch_size,
             shuffle=False,
-            num_workers=loaders_num_workers,
+            num_workers=8,
         )
 
         test_loader = DataLoader(
             test_ds,
             batch_size=args.batch_size,
             shuffle=False,
-            num_workers=loaders_num_workers,
+            num_workers=8,
         )
 
-        print(f"The train_ds size {len(train_ds)}")
-        print(f"The val_ds size {len(val_ds)}")
-        print(f"The test_ds size {len(test_ds)}")
-
         checkpoint_callback = ModelCheckpoint(
-            save_top_k=check_callback_save_top_k,
-            monitor=check_callback_monitor,
-            mode=check_callback_mode,
-            filename=check_callback_filename,
+            save_top_k=1,
+            monitor="val_loss",
+            mode="min",
+            filename="best-model-{epoch:02d}-{val_loss:.2f}",
         )
 
         early_stopping_callback = EarlyStopping(
-            monitor=early_callback_monitor,
-            patience=early_callback_patience,
-            mode=early_callback_mode,
-            verbose=early_callback_verbose,
+            monitor="val_loss",
+            patience=10,
+            mode="min",
+            verbose=True,
         )
 
         if torch.cuda.is_available():
@@ -211,7 +156,7 @@ def main(args):
             accelerator = "cpu"
 
         trainer = pl.Trainer(
-            max_epochs=100,  # Theo had 1
+            max_epochs=100,
             callbacks=[early_stopping_callback, checkpoint_callback],
             log_every_n_steps=5,
             accelerator=accelerator,
@@ -246,8 +191,6 @@ def main(args):
         accuracy = accuracy_score(ground_truth, predictions)
 
         print("---------------------------\n")
-        print("Classification report")
-        print(classification_report(ground_truth, predictions))
         print(f"ROC-AUC {roc_auc}")
         print("---------------------------\n")
 
@@ -274,6 +217,26 @@ def main(args):
 
 # Exécuter la fonction principale
 if __name__ == "__main__":
-    logging.info("Create dataset")
-    seed_everything(42)
-    acc, auc = main(args)
+    seeds = np.arange(args.seeds)
+    macro_acc = []
+    macro_roc = []
+    for seed in seeds:
+        print(f"Start test {seed+1}/{args.seeds}")
+        seed_everything(seed)
+        acc, auc = main(args)
+        macro_acc.extend(acc)
+        macro_roc.extend(auc)
+
+    print("===================================\n")
+    print("Averaged results")
+    print(
+        "Average accuracy "
+        + "{:.2%}".format(np.mean(np.array(macro_acc)))
+        + "± {:.2%}".format(np.std(np.array(macro_acc)))
+    )
+    print(
+        "Average ROC AUC "
+        + "{:.2%}".format(np.mean(np.array(macro_roc)))
+        + "± {:.2%}".format(np.std(np.array(macro_roc)))
+    )
+    print("===================================\n")
