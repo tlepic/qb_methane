@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import pytorch_lightning as pl
 import torch
-from methane import ImageDataset, weight_init, seed_everything
+from methane import ImageDataset, weight_init, seed_everything, normalize_input
 from methane.data import load_train
 from methane.models import (
     Gasnet,
@@ -21,7 +21,7 @@ from sklearn.model_selection import StratifiedKFold, train_test_split
 from torch.utils.data import DataLoader
 
 
-#Getting the hyperparameters from config.yaml
+# Getting the hyperparameters from config.yaml
 with open("config/config.yaml", "r") as config_file:
     config = yaml.safe_load(config_file)
 
@@ -48,8 +48,6 @@ trainer_callbacks = config["trainer"]["callbacks"]
 trainer_log_every_n_steps = config["trainer"]["log_every_n_steps"]
 
 
-
-
 # Étape 1 : Analyser les arguments de la ligne de commande
 ap = argparse.ArgumentParser()
 
@@ -58,6 +56,7 @@ ap.add_argument("--k_cv", type=int, default=arg_k_cv)
 ap.add_argument("--batch_size", type=int, default=arg_batch_size)
 ap.add_argument("--model", type=str, default=arg_model)
 ap.add_argument("--extra", type=bool, default=False)
+ap.add_argument("-norm", type=str, default=False)
 
 # Étape 2 : Configurer les journaux
 logging.basicConfig(
@@ -108,6 +107,29 @@ def main(args):
         X_fold_test = X_train[test_idx]
         X_fold_extra_test = X_extra_feature[test_idx]
         y_fold_test = y_train[test_idx]
+
+        moy_X = np.mean(X_fold_train.flatten())
+        std_X = np.std(X_fold_train.flatten())
+
+        moy_extra = np.mean(X_fold_extra_train.flatten())
+        std_extra = np.std(X_fold_extra_train.flatten())
+
+        if args.norm:
+            for X in X_fold_train:
+                X = normalize_input(X, moy_X, std_X)
+            for X in X_fold_val:
+                X = normalize_input(X, moy_X, std_X)
+            for X in X_fold_test:
+                X = normalize_input(X, moy_X, std_X)
+
+            for X in X_fold_extra_train:
+                X = normalize_input(X, moy_extra, std_extra)
+
+            for X in X_fold_extra_val:
+                X = normalize_input(X, moy_extra, std_extra)
+
+            for X in X_fold_extra_test:
+                X = normalize_input(X, moy_extra, std_extra)
 
         if args.extra:
             # Def datasets
