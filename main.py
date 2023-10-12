@@ -1,9 +1,10 @@
 import yaml
 import argparse
 import logging
-import os
+
 import numpy as np
 import pandas as pd
+import pytorch_lightning as pl
 import torch
 from methane import ImageDataset, weight_init, seed_everything
 from methane.data import load_train
@@ -17,7 +18,6 @@ from methane.models import (
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from sklearn.metrics import accuracy_score, classification_report, roc_auc_score
 from sklearn.model_selection import StratifiedKFold, train_test_split
-from torchvision import transforms
 from torch.utils.data import DataLoader
 
 
@@ -53,62 +53,21 @@ trainer_log_every_n_steps = config["trainer"]["log_every_n_steps"]
 # Étape 1 : Analyser les arguments de la ligne de commande
 ap = argparse.ArgumentParser()
 
-# Before starting the training loop, load existing results if they exist
-if os.path.exists('results_table.csv'):
-    results_df = pd.read_csv('results_table.csv')
-else:
-    results_df = pd.DataFrame(columns=['Image Index', 'True Label', 'Predicted Label', 'Correct'])
-
-# Analyser les arguments de la ligne de commande
-ap = argparse.ArgumentParser()
 ap.add_argument("--data_dir", type=str, default="data")
 ap.add_argument("--k_cv", type=int, default=arg_k_cv)
 ap.add_argument("--batch_size", type=int, default=arg_batch_size)
 ap.add_argument("--model", type=str, default=arg_model)
 ap.add_argument("--extra", type=bool, default=False)
 
-# Configurer les journaux
+# Étape 2 : Configurer les journaux
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO,  # Set the logging level
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",  # Set the log message format
 )
 
-# Initialisation de random seed
+# Étape 3 : Initialisation de random seed
 args = ap.parse_args()
 
-# ======================
-# Augmentation Pipeline
-# ======================
-
-def ensure_grayscale_shape(img_tensor):
-    if len(img_tensor.shape) == 2:     
-        return img_tensor.unsqueeze(0)  
-
-def get_transforms(augment=True):
-    """
-    Returns the appropriate transforms that should be applied to the training set only.
-
-    Args:
-    - augment (bool): If True, returns augmentation pipeline, else returns basic transform.
-
-    Returns:
-    - torchvision.transforms.Compose: Transformation pipeline.
-    """
-    if augment:
-        return transforms.Compose([
-            transforms.Lambda(ensure_grayscale_shape),
-            transforms.RandomHorizontalFlip(),
-            transforms.RandomVerticalFlip(),
-            transforms.RandomRotation(degrees=30),
-        ])
-    else:
-        return transforms.Compose([
-            transforms.Lambda(ensure_grayscale_shape),
-        ])
-    
-# ======================
-# Model Fitting & Training
-# ======================
 
 # Étape 4 : Définir la fonction principale
 def main(args):
@@ -121,7 +80,6 @@ def main(args):
     Returns:
         int: Code de retour (0 pour succès).
     """
-    global results_df
 
     # Charger les données d'entraînement
     logging.info("Load train data")
@@ -131,22 +89,16 @@ def main(args):
     logging.info("Creating dataset")
     kfold = StratifiedKFold(args.k_cv, shuffle=True)
 
-    kfold = StratifiedKFold(args.k_cv, shuffle=True, random_state=42)
     X = np.arange(len(X_train))
     acc = []
     auc = []
-    
-    all_misclassified_images = []
-    all_titles = []
-    all_data = []
-
     for fold, (train_idx, test_idx) in enumerate(kfold.split(X, y_train)):
-        # Data Splitting
         train_idx, val_idx = train_test_split(
             train_idx, test_size=0.2, stratify=y_train[train_idx]
         )
-
-        # Splitting the data based on indices
+        print("---------------------------\n")
+        print(f"Starting fold {fold+1}/{args.k_cv}")
+        # set the training and validation folds
         X_fold_train = X_train[train_idx]
         X_fold_extra_train = X_extra_feature[train_idx]
         y_fold_train = y_train[train_idx]
@@ -258,13 +210,10 @@ def main(args):
         trainer.fit(model, train_loader, val_loader)
         output = trainer.predict(model, test_loader, ckpt_path="best")
 
-        # ======================
-        # Evaluation
-        # ======================
-
         predictions = []
         ground_truth = []
         probas = []
+
         for batch in output:
             proba, y_hat, y = batch
             predictions.extend(y_hat.cpu().numpy())

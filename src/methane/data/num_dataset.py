@@ -1,103 +1,121 @@
-import torch
-import torchvision.transforms as transforms
+import os
 import pandas as pd
-from PIL import Image
-from methane import Gasnet2
+import torch
+from torch.utils.data import DataLoader
+from torchvision.transforms import transforms
 from sklearn.metrics import roc_auc_score
+from methane import Gasnet2
+from dataset import ImageDataset
+from utils import load_train
 
-class ImageDataset(torch.utils.data.Dataset):
-    def __init__(self, image_paths, targets, base_path, transform=None):
-        super().__init__()
-        self.image_paths = [base_path + p + ".tif" for p in image_paths]
-        self.targets = targets
-        self.transform = transform
 
-    def __getitem__(self, index):
-        targets = self.targets[index]
-        image = Image.open(self.image_paths[index])
-        if self.transform:
-            image = self.transform(image)
-        to_tensor = transforms.ToTensor()
-        image = to_tensor(image).float()
-        return image, targets
-    
-    def __len__(self):
-        return len(self.image_paths)
+class EnsembleAugmentation:
+    def __init__(self, base_path, metadata_csv_path, model_info):
+        self.base_path = base_path
+        self.metadata_csv_path = metadata_csv_path
+        self.model_info = model_info
 
-class NumericAugmentation():
-    """
-    Class to apply three pre-trained Vision Models from checkpoints.
+    def load_metadata(self):
+        df = pd.read_csv(self.metadata_csv_path)
+        df['plume'] = df['plume'].map({'yes': 1, 'no': 0})  
+        for i, _ in enumerate(self.model_info):
+            df[f'model_{i+1}'] = 0.0
+        return df
 
-    Contains:
-        - method to apply voting to the test set.
-        - method to augment the metadata table with outputs and voting.
-    """
+    def create_dataloader(self, df):
+        X_train, y_train = load_train(os.path.join(self.base_path, 'data'))
+        transform_flag = True 
+        dataset = ImageDataset(X_train, y_train, transform=transform_flag, extra_feature=True)
+        dataloader = DataLoader(dataset, batch_size=1, shuffle=False, num_workers=8)
+        return dataloader
+
     @staticmethod
     def load_model_from_checkpoint(path, model_type):
+        """
+        Load model from checkpoint based on the given model type.
+        """
         if model_type == "Gasnet":
             model = Gasnet2()
         elif model_type == "Gasnet1":
-            model = Gasnet2()
+            model = Gasnet2() 
         elif model_type == "Gasnet2":
             model = Gasnet2()
         else:
             raise ValueError(f"Unsupported model type: {model_type}")
 
-        checkpoint = torch.load(path, map_location='cpu')
-        model.load_state_dict(checkpoint['state_dict'])
+        model.load_from_checkpoint(path)
         model.eval()
-        return model
+        return model.to(torch.double)
 
     @staticmethod
-    def data_loader_and_augmentation(metadata_csv_path, model_info):
-        df = pd.read_csv(metadata_csv_path)
-        for i, _ in enumerate(model_info):
-            df[f'model_{i+1}'] = 0.0
-
-        transform = transforms.Resize((64, 64))
-        base_path = '/home/octav/Documents/HEC/quantum_black/QB_methane/data/train_data/'
-        dataset = ImageDataset(df['path'].tolist(), df['plume'].tolist(), base_path, transform=transform)
-        dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=False, num_workers=0)
-
-        models = [NumericAugmentation.load_model_from_checkpoint(path, model_type) for path, model_type in model_info]
-
+    def apply_models_to_data(models, dataloader):
+        """
+        Apply the given list of models to the data from the dataloader.
+        Returns a dataframe with the outputs.
+        """
+        df_output = pd.DataFrame()
         for idx, (images, _) in enumerate(dataloader):
             for i, model in enumerate(models):
                 with torch.no_grad():
                     output = model(images)
                     probability = torch.sigmoid(output).item()
-                    df.at[idx, f'model_{i+1}'] = probability
+                    df_output.at[idx, f'model_{i+1}'] = probability
+        print('THIS')
+        print(df_output.head())
+        return df_output
 
-        df['vote'] = df[['model_1', 'model_2', 'model_3']].mean(axis=1)
- #      df['vote'] = (df['vote'] > 0.2).astype(int)Using 0.5 grossly under predicts true leaks.
-        df.to_csv(metadata_csv_path.replace('.csv', '_augmented.csv'), index=False)
-        print(NumericAugmentation.vote_accuracy(df))
-        return df
+    def load_models(self):
+        print("Loading models...")
+        return [EnsembleAugmentation.load_model_from_checkpoint(path, model_type) for path, model_type in self.model_info]
     
     @staticmethod
-    def vote_accuracy(df):
-        """Uses df.vote column to calculate accuracy"""
-        df['plume'] = df['plume'].map({'yes': 1, 'no': 0})  
-        predicted = (df['vote'] > 0.5).astype(int)
-        accuracy = (predicted == df['plume']).mean() * 100
-        
-        roc_auc = roc_auc_score(df['plume'], df['vote'])
-        
-        print(f"The model predicts {predicted.mean() * 100:.2f}% of leaks in the dataset. Truth is {(df['plume']==1).sum()/len(df['plume']) * 100:.2f}%.")
-        print(f"The ROC AUC score is {roc_auc:.2f}")
-        return f"The accuracy of the voting model is {accuracy:.2f}%"
+    def augment_data_with_model_output(df, model_outputs):
+        """
+        Augment the given dataframe with the model outputs.
+        """
+        for column in model_outputs.columns:
+            df[column] = model_outputs[column]
+        df['vote'] = model_outputs.mean(axis=1)
+        return df
 
     @staticmethod
-    def apply_augmentation():
-        absolute_path = '/home/octav/Documents/HEC/quantum_black/QB_methane/'
-        model_info = [
-            (absolute_path + 'lightning_logs/version_21/checkpoints/best-model-epoch=17-val_loss=0.42.ckpt', 'Gasnet2'), 
-            (absolute_path + 'lightning_logs/version_20/checkpoints/best-model-epoch=17-val_loss=0.42.ckpt', 'Gasnet1'), 
-            (absolute_path + 'lightning_logs/version_19/checkpoints/best-model-epoch=17-val_loss=0.42.ckpt', 'Gasnet')
-        ]
-        metadata_csv_path = absolute_path + 'data/train_data/metadata.csv'
-        NumericAugmentation.data_loader_and_augmentation(metadata_csv_path, model_info)
+    def calculate_accuracy(df):
+        """
+        Calculate the accuracy of the ensemble voting model.
+        """
+        predicted = (df['vote'] > 0.5).astype(int)
+        accuracy = (predicted == df['plume']).mean() * 100
+        roc_auc = roc_auc_score(df['plume'], df['vote'])
+        print(f"The model predicts {predicted.mean() * 100:.2f}% of the data as leaks. Actual leak percentage is {(df['plume']==1).sum()/len(df['plume']) * 100:.2f}%.")
+        print(f"The ROC AUC score is {roc_auc:.2f}")
+        return f"The accuracy of the voting model is {accuracy:.2f}%"
+    
+    def save_and_print_results(self, df_augmented):
+        output_file = self.metadata_csv_path.replace('.csv', '_augmented.csv')
+        df_augmented.to_csv(output_file, index=False)
+        print(EnsembleAugmentation.calculate_accuracy(df_augmented))
+    
+    def data_loader_and_augmentation(self):
+        print("Starting data augmentation...")
+        try:
+            df = self.load_metadata()
+            dataloader = self.create_dataloader(df)
+            models = self.load_models()
+            model_outputs = EnsembleAugmentation.apply_models_to_data(models, dataloader)
+            df_augmented = EnsembleAugmentation.augment_data_with_model_output(df, model_outputs)
+            self.save_and_print_results(df_augmented)
+        except Exception as e:
+            print(f"Error: {e}")
+        return df_augmented
 
 if __name__ == "__main__":
-    NumericAugmentation.apply_augmentation()
-
+    absolute_path = '/home/octav/Documents/HEC/quantum_black/QB_methane/'
+    model_info = [
+        (absolute_path + 'lightning_logs/version_26/checkpoints/best-model-epoch=05-val_loss=0.39.ckpt', 'Gasnet2'), 
+        (absolute_path + 'lightning_logs/version_26/checkpoints/best-model-epoch=05-val_loss=0.39.ckpt', 'Gasnet1'), 
+        (absolute_path + 'lightning_logs/version_26/checkpoints/best-model-epoch=05-val_loss=0.39.ckpt', 'Gasnet')
+    ]
+    metadata_csv_path = absolute_path + 'data/train_data/metadata.csv'
+    
+    ensemble = EnsembleAugmentation(absolute_path, metadata_csv_path, model_info)
+    ensemble.data_loader_and_augmentation()
