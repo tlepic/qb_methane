@@ -1,15 +1,11 @@
 import os
 import pathlib
-
 import numpy as np
 import pandas as pd
 import tifffile as tiff
 import torch.nn as nn
 import torch.nn.init as init
 from tqdm import tqdm
-
-# Use a context manager (with statement) to open the TIFF file
-
 
 def load_train(dir_name, extra_feature=False):
     """
@@ -69,8 +65,6 @@ def load_train(dir_name, extra_feature=False):
 
 def load_test(dir_name, extra_feature=False, return_path=False):
     """
-    Loads the test data for methane detection.
-
     Args:
         dir_name (str): Directory name where the test data is located.
         extra_feature (bool, optional): Flag indicating whether to include extra features. Default is False.

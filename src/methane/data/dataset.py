@@ -15,6 +15,7 @@ class ImageDataset(Dataset):
             transform (bool, optional): Flag indicating whether to apply transformations to the features. Default is True.
             extra_feature (torch.Tensor, optional): Tensor containing additional features. Default is None.
         """
+    def __init__(self, features, targets, transform=True) -> None:
         super().__init__()
         self.features = features
         self.targets = targets
