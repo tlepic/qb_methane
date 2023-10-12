@@ -14,6 +14,16 @@ model.eval()
 
 # Get methane plume prediction
 def methane_predict(image, coordinates):
+    """
+    Predicts the presence of a methane plume in an image and saves the image with a highlighted ellipse if a plume is detected.
+
+    Args:
+        image (str): The name of the image file.
+        coordinates (tuple): The coordinates (x, y) of the plume on the image.
+
+    Returns:
+        float: The predicted probability of a methane plume being present.
+    """
     # Converting the image into a tensor
     with tiff.TiffFile("data/test_data/images/"+image) as tif:
         _feature = tif.asarray().astype(np.float64)
@@ -39,6 +49,15 @@ def methane_predict(image, coordinates):
 
 # Get image informations
 def image_infos(image_name):
+    """
+    Retrieves the location and plume coordinates associated with an image.
+
+    Args:
+        image_name (str): The name of the image file.
+
+    Returns:
+        tuple: A tuple containing the location (latitude, longitude) and plume coordinates (x, y) on the image.
+    """
     # Read the metadata.csv file
     metadata_df = pd.read_csv("data/test_data/metadata.csv")
 
@@ -63,6 +82,16 @@ def image_infos(image_name):
 
 # Get satellite view of location
 def plot_satellite_image(latitude, longitude):
+    """
+    Retrieves and saves a satellite image of a given location.
+
+    Args:
+        latitude (float): The latitude of the location.
+        longitude (float): The longitude of the location.
+
+    Returns:
+        str: The path to the saved satellite image.
+    """
     # Get the right satellite image
     fig = plt.figure(figsize=(10, 10))
     m = Basemap(epsg=3857, projection='merc', llcrnrlat=latitude-0.005, urcrnrlat=latitude+0.005, llcrnrlon=longitude-0.005, urcrnrlon=longitude+0.005, resolution='h')

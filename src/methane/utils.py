@@ -83,11 +83,28 @@ def weight_init(m):
 
 
 def seed_everything(seed=42):
+    """
+    Sets the random seed for reproducibility.
+
+    Args:
+        seed (int, optional): Seed value to set. Default is 42.
+    """
     random.seed(seed)
     torch.manual_seed(seed)
     np.random.seed(seed)
 
 
 def normalize_input(x, mean, std):
+    """
+    Normalizes the input tensor by subtracting the mean and dividing by the standard deviation.
+
+    Args:
+        x (torch.Tensor): Input tensor to normalize.
+        mean (float or torch.Tensor): Mean value or tensor for subtraction.
+        std (float or torch.Tensor): Standard deviation value or tensor for division.
+
+    Returns:
+        torch.Tensor: Normalized input tensor.
+    """
     x = (x - mean) / std
     return x

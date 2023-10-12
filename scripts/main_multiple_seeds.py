@@ -1,21 +1,19 @@
 import argparse
 import logging
+import os
 
 import numpy as np
-import pandas as pd
 import pytorch_lightning as pl
 import torch
 from methane import ImageDataset, seed_everything, weight_init
 from methane.data import load_train
 from methane.models import (
     Gasnet,
-    Gasnet2,
     MethaneDetectionModel,
-    SimplifiedGasnet,
     TestModel,
 )
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
-from sklearn.metrics import accuracy_score, classification_report, roc_auc_score
+from sklearn.metrics import accuracy_score, roc_auc_score
 from sklearn.model_selection import StratifiedKFold, train_test_split
 from torch.utils.data import DataLoader
 
