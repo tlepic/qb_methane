@@ -7,11 +7,11 @@ from torchmetrics.classification import BinaryAccuracy, BinaryAUROC
 
 
 class TestModel(pl.LightningModule):
-    def __init__(self):
+    def __init__(self, num_channel=1):
         super().__init__()
 
         # Conv-Pool Structure 1
-        self.conv1 = nn.Conv2d(1, 8, kernel_size=3, padding=1)
+        self.conv1 = nn.Conv2d(num_channel, 8, kernel_size=3, padding=1)
         self.pool1 = nn.MaxPool2d(2)
         self.dropout1 = nn.Dropout(0.3)
         self.batchnorm1 = nn.BatchNorm2d(8)
