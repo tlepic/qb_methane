@@ -9,7 +9,7 @@ from mpl_toolkits.basemap import Basemap
 from matplotlib.patches import Ellipse
 
 model = TestModel()
-model = model.load_from_checkpoint("lightning_logs/version_9/checkpoints/best-model-epoch=28-val_loss=0.31.ckpt")
+model = model.load_from_checkpoint("app/tools/model_checkpoint.ckpt")
 model.eval()
 
 # Get methane plume prediction
